@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+import "network_module.proto";
+
+// Single shop item purchase record
+message ShopBuyRecord {
+    int32 shopItemId = 1;
+    int32 boughtCount = 2;
+}
+
+// ── List ──
+message ShopListC2S {}
+message ShopListS2C {
+    S2CResult rst = 1;
+    repeated ShopBuyRecord records = 2;
+}
+
+// ── Buy ──
+message ShopBuyC2S {
+    int32 shopItemId = 1;
+}
+message ShopBuyS2C {
+    S2CResult rst = 1;
+    int32 shopItemId = 2;
+    int32 boughtCount = 3;
+    int32 goldRemaining = 4;
+}

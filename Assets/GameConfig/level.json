@@ -1,0 +1,44 @@
+{
+  "items": [
+    {
+      "level": 1,
+      "expValue": 100
+    },
+    {
+      "level": 2,
+      "expValue": 150
+    },
+    {
+      "level": 3,
+      "expValue": 250
+    },
+    {
+      "level": 4,
+      "expValue": 400
+    },
+    {
+      "level": 5,
+      "expValue": 650
+    },
+    {
+      "level": 6,
+      "expValue": 900
+    },
+    {
+      "level": 7,
+      "expValue": 1300
+    },
+    {
+      "level": 8,
+      "expValue": 1800
+    },
+    {
+      "level": 9,
+      "expValue": 2400
+    },
+    {
+      "level": 10,
+      "expValue": 3600
+    }
+  ]
+}

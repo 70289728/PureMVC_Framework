@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+// Single announcement
+message AnnounceInfo {
+    int64 id = 1;
+    string title = 2;
+    string content = 3;
+    int32 priority = 4; // 0: normal, 1: important, 2: urgent
+    int64 endTime = 5;  // unix timestamp, 0 = permanent
+}
+
+// ── List (client request on login) ──
+message AnnounceListC2S {}
+message AnnounceListS2C {
+    repeated AnnounceInfo announces = 1;
+}
+
+// ── New / Update push (server → client) ──
+message AnnounceNotifyS2C {
+    AnnounceInfo announce = 1;
+    bool isDelete = 2; // true = removed
+}

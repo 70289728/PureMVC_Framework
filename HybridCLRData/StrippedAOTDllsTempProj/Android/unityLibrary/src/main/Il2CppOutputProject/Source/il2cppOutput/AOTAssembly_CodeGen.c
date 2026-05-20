@@ -1,0 +1,150 @@
+﻿#include "pch-c.h"
+#ifndef _MSC_VER
+# include <alloca.h>
+#else
+# include <malloc.h>
+#endif
+
+
+#include "codegen/il2cpp-codegen-metadata.h"
+
+
+
+
+
+extern void GameMain_get_Instance_mC6F058C6B884A20E59AB2A7BE29DB2980ABEF9F3 (void);
+extern void GameMain_set_Instance_m960C4554627E25FCB284559176970E5F24CB3D13 (void);
+extern void GameMain_Awake_m86139D55DE06B9EFEE9DD511832BBE0EEB668E3E (void);
+extern void GameMain_LoadBaseHotUpdateAssembly_m041CEFF6840F2C1A4CC1D6AA672B7F9617C39028 (void);
+extern void GameMain_Start_mB34F6372D0C42164FC3A85632345D69DAEE5696D (void);
+extern void GameMain_CacheReflectedTypes_m8F1E9E74552251235D583E924BA09EE25EFF2084 (void);
+extern void GameMain_ResolveFrameworkType_m659A1BB47B45A0C056F3DF15BA2917CEF291C279 (void);
+extern void GameMain_RefreshCommandTypes_mE3F24B45383EEC96DEBA00E0EF39B87860262883 (void);
+extern void GameMain_ApplyHotUpdate_mA3EF0A6FDF7466138B9DB15D9FD7B7083A704914 (void);
+extern void GameMain_InvokeHotUpdateConst_m0F5A121DE5009132E9DEB6F876FAF5FA26C4AA3E (void);
+extern void GameMain_GetInstance_m2D9AD7CF3658B375AF9DFDA58DFAD341DF90936B (void);
+extern void GameMain_CallMethod_m8CE3FB7D712E3066EDA2A0FEF2D42195BF879EAC (void);
+extern void GameMain_CallStaticMethod_m7DB1489FC129D228EC0D5125D35C1F323133BF16 (void);
+extern void GameMain_InitManagers_m8B97996C602C14B3B97608F1D3606C2049D157B8 (void);
+extern void GameMain_StartupFlow_m563FDC64A788DB0FAD0F0AE3254CAB87A71289EE (void);
+extern void GameMain_InitModule_m018D6DE2D7B22D2279E8EAAB9C62C417E208EA2D (void);
+extern void GameMain_GameStart_m86DE1492626D7E64E6FFF2F5CEE2959D00B491E4 (void);
+extern void GameMain_RegisterCommand_mC2ABEC32F7343747E7B185AEDA483978000A1751 (void);
+extern void GameMain_ConnectServer_m81FC7F864310736DEB32B55742FB3B4BFBDDA134 (void);
+extern void GameMain_OpenLogin_m91FE9BAB845A4B3A764F82F6F7F544826CDB496D (void);
+extern void GameMain__ctor_m9C9F856711E65FA77F644E29166CD531965F0F57 (void);
+extern void GameMain__cctor_m8FA55B4526ECED27C9FE20185162507B3422B6A2 (void);
+extern void U3CStartupFlowU3Ed__38__ctor_mE5B2CCCAB2ABE1BD8CEE0EF5BBBEAC7BD8613E16 (void);
+extern void U3CStartupFlowU3Ed__38_System_IDisposable_Dispose_mA3EAA75E2BB193E0F4EDBAB75D566709F6F8FC1D (void);
+extern void U3CStartupFlowU3Ed__38_MoveNext_mA2A5321CE80CBABFAB45A7C83AB489E31197FE41 (void);
+extern void U3CStartupFlowU3Ed__38_System_Collections_Generic_IEnumeratorU3CSystem_ObjectU3E_get_Current_m49BD612EC7D5E8BB62AA00423D21C65892E2C608 (void);
+extern void U3CStartupFlowU3Ed__38_System_Collections_IEnumerator_Reset_m05046009740F47B54317A2A86B4CF01037470421 (void);
+extern void U3CStartupFlowU3Ed__38_System_Collections_IEnumerator_get_Current_mA7E9245BA7E0F1D7FC79637079420A6F1DC1A840 (void);
+extern void UnitySourceGeneratedAssemblyMonoScriptTypes_v1_Get_m7E33238458568EB04F6525CC8B7B3EEC2F485B20 (void);
+extern void UnitySourceGeneratedAssemblyMonoScriptTypes_v1__ctor_mDA2F789BB98ECB8A51D2D0BB14A1A2AC5BAB7374 (void);
+static Il2CppMethodPointer s_methodPointers[32] = 
+{
+	GameMain_get_Instance_mC6F058C6B884A20E59AB2A7BE29DB2980ABEF9F3,
+	GameMain_set_Instance_m960C4554627E25FCB284559176970E5F24CB3D13,
+	GameMain_Awake_m86139D55DE06B9EFEE9DD511832BBE0EEB668E3E,
+	GameMain_LoadBaseHotUpdateAssembly_m041CEFF6840F2C1A4CC1D6AA672B7F9617C39028,
+	GameMain_Start_mB34F6372D0C42164FC3A85632345D69DAEE5696D,
+	GameMain_CacheReflectedTypes_m8F1E9E74552251235D583E924BA09EE25EFF2084,
+	GameMain_ResolveFrameworkType_m659A1BB47B45A0C056F3DF15BA2917CEF291C279,
+	GameMain_RefreshCommandTypes_mE3F24B45383EEC96DEBA00E0EF39B87860262883,
+	GameMain_ApplyHotUpdate_mA3EF0A6FDF7466138B9DB15D9FD7B7083A704914,
+	GameMain_InvokeHotUpdateConst_m0F5A121DE5009132E9DEB6F876FAF5FA26C4AA3E,
+	GameMain_GetInstance_m2D9AD7CF3658B375AF9DFDA58DFAD341DF90936B,
+	GameMain_CallMethod_m8CE3FB7D712E3066EDA2A0FEF2D42195BF879EAC,
+	GameMain_CallStaticMethod_m7DB1489FC129D228EC0D5125D35C1F323133BF16,
+	GameMain_InitManagers_m8B97996C602C14B3B97608F1D3606C2049D157B8,
+	GameMain_StartupFlow_m563FDC64A788DB0FAD0F0AE3254CAB87A71289EE,
+	GameMain_InitModule_m018D6DE2D7B22D2279E8EAAB9C62C417E208EA2D,
+	GameMain_GameStart_m86DE1492626D7E64E6FFF2F5CEE2959D00B491E4,
+	NULL,
+	GameMain_RegisterCommand_mC2ABEC32F7343747E7B185AEDA483978000A1751,
+	NULL,
+	GameMain_ConnectServer_m81FC7F864310736DEB32B55742FB3B4BFBDDA134,
+	GameMain_OpenLogin_m91FE9BAB845A4B3A764F82F6F7F544826CDB496D,
+	GameMain__ctor_m9C9F856711E65FA77F644E29166CD531965F0F57,
+	GameMain__cctor_m8FA55B4526ECED27C9FE20185162507B3422B6A2,
+	U3CStartupFlowU3Ed__38__ctor_mE5B2CCCAB2ABE1BD8CEE0EF5BBBEAC7BD8613E16,
+	U3CStartupFlowU3Ed__38_System_IDisposable_Dispose_mA3EAA75E2BB193E0F4EDBAB75D566709F6F8FC1D,
+	U3CStartupFlowU3Ed__38_MoveNext_mA2A5321CE80CBABFAB45A7C83AB489E31197FE41,
+	U3CStartupFlowU3Ed__38_System_Collections_Generic_IEnumeratorU3CSystem_ObjectU3E_get_Current_m49BD612EC7D5E8BB62AA00423D21C65892E2C608,
+	U3CStartupFlowU3Ed__38_System_Collections_IEnumerator_Reset_m05046009740F47B54317A2A86B4CF01037470421,
+	U3CStartupFlowU3Ed__38_System_Collections_IEnumerator_get_Current_mA7E9245BA7E0F1D7FC79637079420A6F1DC1A840,
+	UnitySourceGeneratedAssemblyMonoScriptTypes_v1_Get_m7E33238458568EB04F6525CC8B7B3EEC2F485B20,
+	UnitySourceGeneratedAssemblyMonoScriptTypes_v1__ctor_mDA2F789BB98ECB8A51D2D0BB14A1A2AC5BAB7374,
+};
+static const int32_t s_InvokerIndices[32] = 
+{
+	8495,
+	8334,
+	5591,
+	5591,
+	5591,
+	5591,
+	8166,
+	5591,
+	4573,
+	4573,
+	4061,
+	1134,
+	1134,
+	5591,
+	5493,
+	5591,
+	5591,
+	0,
+	834,
+	0,
+	5591,
+	5591,
+	5591,
+	8527,
+	4545,
+	5591,
+	5412,
+	5493,
+	5591,
+	5493,
+	8532,
+	5591,
+};
+static const Il2CppTokenRangePair s_rgctxIndices[2] = 
+{
+	{ 0x06000012, { 0, 1 } },
+	{ 0x06000014, { 1, 2 } },
+};
+extern const uint32_t g_rgctx_T_tDF8DA2A14A4E6C9BFB56B5BFD84D78C49B64FBCC;
+extern const uint32_t g_rgctx_Activator_CreateInstance_TisT_t854AFF2CD80E0BDADEF2C2E358A4EB6649BCFFFF_mF794E0C521419CE6497AB5F79548A119BB142420;
+extern const uint32_t g_rgctx_T_t854AFF2CD80E0BDADEF2C2E358A4EB6649BCFFFF;
+static const Il2CppRGCTXDefinition s_rgctxValues[3] = 
+{
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_T_tDF8DA2A14A4E6C9BFB56B5BFD84D78C49B64FBCC },
+	{ (Il2CppRGCTXDataType)3, (const void *)&g_rgctx_Activator_CreateInstance_TisT_t854AFF2CD80E0BDADEF2C2E358A4EB6649BCFFFF_mF794E0C521419CE6497AB5F79548A119BB142420 },
+	{ (Il2CppRGCTXDataType)2, (const void *)&g_rgctx_T_t854AFF2CD80E0BDADEF2C2E358A4EB6649BCFFFF },
+};
+extern const Il2CppDebuggerMetadataRegistration g_DebuggerMetadataRegistrationAOTAssembly;
+IL2CPP_EXTERN_C const Il2CppCodeGenModule g_AOTAssembly_CodeGenModule;
+const Il2CppCodeGenModule g_AOTAssembly_CodeGenModule = 
+{
+	"AOTAssembly.dll",
+	32,
+	s_methodPointers,
+	0,
+	NULL,
+	s_InvokerIndices,
+	0,
+	NULL,
+	2,
+	s_rgctxIndices,
+	3,
+	s_rgctxValues,
+	&g_DebuggerMetadataRegistrationAOTAssembly,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+};

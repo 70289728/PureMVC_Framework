@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+message MessageHeader {
+    int32 message_id = 1;
+}
+
+message NetworkMessage {
+    MessageHeader messageHeader = 2;
+}
+
+message S2CResult{
+    bool result = 1;
+    int32 errCode = 2;
+}
+
+message ConnectS2C{
+    S2CResult rst = 1;
+}
+
+message LoginMessageC2S{
+    int64 accountId = 1;
+    string password = 2;
+}
+
+message PlayerInfo{
+    string playerName = 1;
+    int32 gender = 2;
+    int32 job = 3;
+    int32 level = 4;
+    int32 exp = 5;
+    int32 gold = 6;
+    int32 diamond = 7;
+}
+
+message LoginMessageS2C{
+    int64 accountId = 1;
+    S2CResult rst = 2;
+    PlayerInfo playerData = 3;
+}
+
+message HeartbeatC2S{
+    int64 accountId = 1;
+}
+
+message HeartbeatS2C{
+    int64 accountId = 1;
+    S2CResult rst = 2;
+}
+
+message RegisterC2S{
+    int64 accountId = 1;
+    string password = 2;
+}
+
+message RegisterS2C{
+    int64 accountId = 1;
+    S2CResult rst = 2;
+}

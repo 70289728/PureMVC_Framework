@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d77022a2480fd3944b21a5925b3fda37, type: 3}
+  m_Name: HotUpdateConfig
+  m_EditorClassIdentifier: 
+  serverBaseUrl: http://10.219.60.142:8080
+  manifestPath: manifest.json
+  maxRetryCount: 3
+  downloadTimeoutSeconds: 30
+  localHotUpdateDir: HotUpdate
+  versionKey: hot_update_version

@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+import "network_module.proto";
+
+// Sign-in status for a single day
+message SignDay {
+    int32 day = 1;      // 1-based day index
+    int32 status = 2;   // 0: missed, 1: claimed, 2: available (current)
+}
+
+// Reward item for a sign-in day
+message SignReward {
+    int32 day = 1;
+    int32 type = 2;     // 1: gold, 2: diamond, 3: item
+    int32 itemId = 3;
+    int32 count = 4;
+}
+
+// ── Info (login push / manual request) ──
+message SignInInfoC2S {}
+message SignInInfoS2C {
+    int32 signDay = 1;           // current sign-in day (1-7, resets after 7)
+    int32 totalSignDays = 2;     // lifetime total
+    int32 consecutiveDays = 3;   // current streak
+    int32 maxConsecutiveDays = 4;
+    repeated SignDay days = 5;   // current cycle (1-7)
+    repeated SignReward rewards = 6; // reward config
+    int64 cycleStartTime = 7;    // unix timestamp of current cycle start
+    int64 lastSignTime = 8;      // last sign-in timestamp
+    bool canSignToday = 9;
+}
+
+// ── Do sign-in ──
+message SignInDoC2S {}
+message SignInDoS2C {
+    S2CResult rst = 1;
+    int32 day = 2;
+    repeated SignReward claimed = 3;
+    int32 consecutiveDays = 4;
+}
+
+// ── Make up (yesterday only) ──
+message SignInMakeUpC2S {}
+message SignInMakeUpS2C {
+    S2CResult rst = 1;
+    int32 day = 2;
+}

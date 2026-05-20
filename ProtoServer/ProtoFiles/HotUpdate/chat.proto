@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+import "network_module.proto";
+
+message ChatC2S {
+}
+
+message ChatS2C {
+   S2CResult result = 1;
+}

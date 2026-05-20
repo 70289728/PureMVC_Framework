@@ -1,0 +1,15 @@
+syntax = "proto3";
+import "network_module.proto";
+
+message CreatePlayerC2S{
+    string playerName = 1;
+    int32 gender = 2;
+    int32 job = 3;
+}
+
+message CreatePlayerS2C{
+    S2CResult rst = 1;
+    string playerName = 2;
+    int32 level = 3;
+    int32 exp = 4;
+}

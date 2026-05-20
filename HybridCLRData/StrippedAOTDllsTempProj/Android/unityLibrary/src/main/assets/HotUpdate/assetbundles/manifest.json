@@ -1,0 +1,52 @@
+{
+    "version": "1.0.8",
+    "buildTime": "2026-05-19T10:54:57",
+    "platform": "Android",
+    "bundles": [
+        {
+            "name": "base_base_prefab.ab",
+            "md5": "1ae6d1d57e0e280e544254657259efb0",
+            "sha256": "cba8ec30df78efec07d793ea6435a7c2977fb6a93d69b3945d861624342cb632",
+            "crc32": "A5EEB583",
+            "size": 16822,
+            "layer": 0,
+            "compression": 0,
+            "resourceType": 1,
+            "dependencies": [],
+            "assets": [
+                "Assets/ProjectAssets/Base/UIAssets/Prefabs/UIReStart/UIReStartPanel.prefab",
+                "Assets/ProjectAssets/Base/UIAssets/Prefabs/UIHotUpdate/UIHotUpdatePanel.prefab",
+                "Assets/ProjectAssets/Base/UIAssets/Prefabs/UILogin/UILoginPanel.prefab"
+            ]
+        },
+        {
+            "name": "hotfix_hotupdate_prefab.ab",
+            "md5": "29f417b1906e5934b89aae7175a165b8",
+            "sha256": "72e6a19b397c5d3518c1c783f4e74565e9adc126ddf6a7428e25efa989a992e0",
+            "crc32": "139AA6EF",
+            "size": 21132,
+            "layer": 2,
+            "compression": 0,
+            "resourceType": 1,
+            "dependencies": [],
+            "assets": [
+                "Assets/ProjectAssets/HotUpdate/UIAssets/Prefabs/UIMain/UIMainPanel.prefab",
+                "Assets/ProjectAssets/HotUpdate/UIAssets/Prefabs/UICreatePlayer/UICreatePlayerPanel.prefab",
+                "Assets/ProjectAssets/HotUpdate/UIAssets/Prefabs/UIShop/UIShopPanel.prefab",
+                "Assets/ProjectAssets/HotUpdate/UIAssets/Prefabs/UIBag/UIBagPanel.prefab"
+            ]
+        },
+        {
+            "name": "dll/HotUpdateAssembly.dll",
+            "md5": "8a7fe4a3fa6fb50fcb1aeebc0d4ac7f8",
+            "sha256": "",
+            "crc32": "",
+            "size": 30208,
+            "layer": 0,
+            "compression": 0,
+            "resourceType": 0,
+            "dependencies": [],
+            "assets": []
+        }
+    ]
+}

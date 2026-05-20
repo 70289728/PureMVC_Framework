@@ -1,0 +1,108 @@
+syntax = "proto3";
+
+import "network_module.proto";
+
+// ── Friend Info ──
+message FriendInfo {
+    int64 playerId = 1;
+    string playerName = 2;
+    int32 level = 3;
+    bool isOnline = 4;
+    string lastLoginTime = 5;
+    string remark = 6;
+}
+
+// ── Friend Apply Info ──
+message FriendApplyInfo {
+    int64 fromPlayerId = 1;
+    string fromPlayerName = 2;
+    int32 fromLevel = 3;
+    string applyTime = 4;
+    int32 status = 5; // 0: pending, 1: accepted, 2: refused
+}
+
+// ── Block Info ──
+message BlockInfo {
+    int64 playerId = 1;
+    string playerName = 2;
+    int32 level = 3;
+    string blockTime = 4;
+}
+
+// ── Search ──
+message FriendSearchC2S {
+    string keyword = 1;
+}
+message FriendSearchS2C {
+    S2CResult rst = 1;
+    int64 playerId = 2;
+    string playerName = 3;
+    int32 level = 4;
+}
+
+// ── Apply ──
+message FriendApplyC2S {
+    int64 targetPlayerId = 1;
+}
+message FriendApplyS2C {
+    S2CResult rst = 1;
+}
+
+// ── Apply List ──
+message FriendApplyListC2S {}
+message FriendApplyListS2C {
+    repeated FriendApplyInfo applies = 1;
+}
+
+// ── Reply (accept / refuse) ──
+message FriendReplyC2S {
+    int64 fromPlayerId = 1;
+    bool agree = 2; // true = accept, false = refuse
+}
+message FriendReplyS2C {
+    S2CResult rst = 1;
+}
+
+// ── Friend List ──
+message FriendListC2S {}
+message FriendListS2C {
+    repeated FriendInfo friends = 1;
+}
+
+// ── Delete ──
+message FriendDeleteC2S {
+    int64 friendPlayerId = 1;
+}
+message FriendDeleteS2C {
+    S2CResult rst = 1;
+}
+
+// ── Remark ──
+message FriendRemarkC2S {
+    int64 friendPlayerId = 1;
+    string remark = 2;
+}
+message FriendRemarkS2C {
+    S2CResult rst = 1;
+}
+
+// ── Block / Unblock ──
+message FriendBlockC2S {
+    int64 playerId = 1;
+    bool isBlock = 2; // true = block, false = unblock
+}
+message FriendBlockS2C {
+    S2CResult rst = 1;
+}
+
+// ── Block List ──
+message FriendBlockListC2S {}
+message FriendBlockListS2C {
+    repeated BlockInfo blocks = 1;
+}
+
+// ── Online Notify (server push) ──
+message FriendOnlineNotifyS2C {
+    int64 playerId = 1;
+    bool isOnline = 2;
+}

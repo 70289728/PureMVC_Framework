@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+import "network_module.proto";
+
+// Attachment item
+message MailAttachment {
+    int32 type = 1;    // 1: gold, 2: diamond, 3: item
+    int32 itemId = 2;
+    int32 count = 3;
+}
+
+// Single mail
+message MailInfo {
+    int64 mailId = 1;
+    string title = 2;
+    string content = 3;
+    string senderName = 4;
+    string sendTime = 5;
+    int32 status = 6;  // 0: unread, 1: read, 2: claimed
+    repeated MailAttachment attachments = 7;
+}
+
+// ── List ──
+message MailListC2S {}
+message MailListS2C {
+    repeated MailInfo mails = 1;
+}
+
+// ── Read ──
+message MailReadC2S {
+    int64 mailId = 1;
+}
+message MailReadS2C {
+    S2CResult rst = 1;
+}
+
+// ── Claim ──
+message MailClaimC2S {
+    int64 mailId = 1;
+}
+message MailClaimS2C {
+    S2CResult rst = 1;
+    repeated MailAttachment claimed = 2;
+}
+
+// ── Delete ──
+message MailDeleteC2S {
+    repeated int64 mailIds = 1;
+}
+message MailDeleteS2C {
+    S2CResult rst = 1;
+}
+
+// ── New mail notify (server push) ──
+message MailNewNotifyS2C {
+    MailInfo mail = 1;
+}

@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "network_module.proto";
+
+message PlayerExtC2S {
+    int64 accountId = 1;
+}
+
+message PlayerExtS2C {
+    S2CResult rst = 1;
+    int32 vipLevel = 2;
+    string signature = 3;
+    int32 battlePassExp = 4;
+}
