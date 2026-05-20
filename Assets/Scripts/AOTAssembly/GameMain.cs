@@ -39,7 +39,7 @@ public class GameMain : MonoBehaviour
     /// <summary>
     /// The currently active HotUpdateAssembly. Loaded once at startup from
     /// persistentCache > Resources, then optionally replaced by ApplyHotUpdate.
-    /// Only used for types that remain in HotUpdateAssembly (BagProxy, ShopProxy, UI mediators).
+    /// Only used for types that remain in HotUpdateAssembly (HotUpdateStartupMacroCommand, LoginSuccessCommand, etc.).
     /// </summary>
     private Assembly _hotAssembly;
 
@@ -94,8 +94,7 @@ public class GameMain : MonoBehaviour
     {
 #if UNITY_EDITOR
         // Editor: resolve any type from HotUpdateAssembly to get the Assembly.
-        // ShopProxy is still in HotUpdateAssembly.
-        var editorType = Type.GetType("ShopProxy,HotUpdateAssembly");
+        var editorType = Type.GetType("HotUpdateStartupMacroCommand,HotUpdateAssembly");
         if (editorType != null)
         {
             _hotAssembly = editorType.Assembly;
