@@ -1,0 +1,1 @@
+cmd /k "cd /d %~dp0 && python export_config.py && echo. && echo Press any key to close... && pause >nul && exit"
