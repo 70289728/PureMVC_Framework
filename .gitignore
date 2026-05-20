@@ -90,3 +90,4 @@ server_out*.txt
 # CodeMaker internal files
 # ============================================================
 .codemaker/
+ProtoServer/.codemaker/
