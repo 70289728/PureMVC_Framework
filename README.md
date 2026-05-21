@@ -154,6 +154,29 @@ python server.py
 | `ConfigManager` | Configuration table loading |
 | `PlayerPrefsManager` | PlayerPrefs wrapper |
 | `GameSceneManager` | Scene loading/unloading |
+| `LuaBootstrap` | xLua lifecycle: Initialize, Tick, Require, Call, ReloadAfterHotUpdate |
+
+## Lua Hook System
+
+Each PureMVC custom base class exposes a `TryLuaHook(hookName, args)` method. Lua scripts can intercept lifecycles and override C# logic at runtime without `[Hotfix]` tags or app restart.
+
+| Layer | Lua Path | Hook Names |
+|-------|----------|------------|
+| `UIMediatorBase` | `LuaScripts/MediatorHook/{TypeName}.lua` | `OnShow`, `OnHide`, `OnClose` |
+| `CommandBase` | `LuaScripts/CommandHook/{TypeName}.lua` | `OnExecute` |
+| `MacroCommandBase` | `LuaScripts/CommandHook/{TypeName}.lua` | `OnExecute` |
+| `ProxyBase` | `LuaScripts/ProxyHook/{TypeName}.lua` | `OnRegister`, `OnDataChanged`, custom |
+
+```lua
+-- LuaScripts/MediatorHook/UIShopMediator.lua
+function OnShow(mediator)
+    local btn = mediator:FindComponentByBindKey("Button_BuyBtn")
+    if btn then btn.onClick:AddListener(function() end) end
+    return true  -- Lua handled it, skip C# OnShow()
+end
+```
+
+`FindComponentByBindKey<T>(bindKey)` searches all `IUIBind`-tagged components in the view hierarchy by `BindKey`, giving Lua access to UI components without exposing private C# fields.
 
 ## PureMVC Binding
 
