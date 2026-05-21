@@ -162,29 +162,7 @@ public class UIManager
         GameObject uiGo = new GameObject(uiName);
         uiGo.transform.SetParent(parentTrans, false);
 
-        // Create mediator using the compile-time generic type T.
-        // Do NOT call CreateMediator() here — it uses AppDomain.GetAssemblies()
-        // which fails on IL2CPP where assemblies are merged.
-        T uiMediator = null;
-        try
-        {
-            uiMediator = (T)Activator.CreateInstance(typeof(T), uiName, uiGo, (int)layer, false);
-        }
-        catch (Exception e)
-        {
-            Log.e($"Failed to create mediator for {uiName}: {e.Message}", "UIManager");
-        }
-        if (uiMediator == null)
-        {
-            Log.e($"CreateMediator failed for: {uiName}", "UIManager");
-            GameObject.Destroy(uiGo);
-            return;
-        }
-
-        pureMvcFacade.RegisterMediator(uiMediator);
-        uiMediatorDic.Add(uiName, uiMediator);
-        uiStack.Push(uiName);
-        uiMediator.Show();
+        TryCreateAndRegisterMediator<T>(uiName, uiGo, layer, isPushStack: true);
     }
 
     public void OpenUI<T>(string uiName, EUILayer layer = EUILayer.MainLayer, bool isPushStack = true, bool hideLastUI = true) where T : UIMediatorBase
@@ -199,7 +177,6 @@ public class UIManager
         {
             return;
         }
-        var prefebPath = uiViewDefData.prefabPath;
         if (uiMediatorDic.ContainsKey(uiName))
         {
             // UI already exists, just show it without touching the stack
@@ -226,9 +203,15 @@ public class UIManager
         var parentTrans = layerTransDic[layer];
         GameObject uiGo = GameObject.Instantiate(uiPrefab, parentTrans);
         uiGo.name = uiName;
-        //UnityEngine.Object.DontDestroyOnLoad(uiGo);
-        // Create mediator using the compile-time generic type T (avoids
-        // AppDomain.GetAssemblies() reflection which fails on IL2CPP).
+
+        TryCreateAndRegisterMediator<T>(uiName, uiGo, layer, isPushStack);
+    }
+
+    /// <summary>
+    /// Create mediator via Activator, register with Facade, add to dictionary, optionally push stack, then Show.
+    /// </summary>
+    private void TryCreateAndRegisterMediator<T>(string uiName, GameObject uiGo, EUILayer layer, bool isPushStack) where T : UIMediatorBase
+    {
         T uiMediator = null;
         try
         {
@@ -236,7 +219,7 @@ public class UIManager
         }
         catch (Exception e)
         {
-            Log.e($"CreateMediator failed for: {uiName}: {e.Message}", "UIManager");
+            Log.e($"Failed to create mediator for {uiName}: {e.Message}", "UIManager");
         }
         if (uiMediator == null)
         {

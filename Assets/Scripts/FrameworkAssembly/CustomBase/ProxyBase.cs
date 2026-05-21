@@ -3,7 +3,8 @@ using PureMVC.Patterns.Facade;
 
 /// <summary>
 /// Base class for all Proxy classes in the project.
-/// Provides convenient access to Facade and common proxy operations.
+/// Provides convenient access to Facade, common proxy operations,
+/// and optional Lua hook support for hot-updatable data logic.
 /// </summary>
 public abstract class ProxyBase : Proxy
 {
@@ -17,5 +18,29 @@ public abstract class ProxyBase : Proxy
     protected T GetProxy<T>(string proxyName) where T : ProxyBase
     {
         return Facade.RetrieveProxy(proxyName) as T;
+    }
+
+    /// <summary>
+    /// Try invoke a Lua hook for the given hook name.
+    /// Lua file path: LuaScripts/ProxyHook/{proxyTypeName}.lua
+    /// Lua function name matches hookName.
+    /// Returns true if Lua handled it.
+    /// 
+    /// Usage in subclass:
+    ///   public override void OnRegister() { base.OnRegister(); TryLuaHook("OnRegister"); ... }
+    ///   or call TryLuaHook("OnDataChanged", "items", newValue) on data change.
+    /// </summary>
+    protected bool TryLuaHook(string hookName, params object[] args)
+    {
+#if UNITY_EDITOR
+        return false;
+#else
+        var lua = LuaBootstrap.Instance;
+        if (lua == null || !lua.IsInitialized) return false;
+
+        string path = $"LuaScripts/ProxyHook/{GetType().Name}.lua";
+        object result = lua.Call(path, hookName, args);
+        return result is bool b && b;
+#endif
     }
 }

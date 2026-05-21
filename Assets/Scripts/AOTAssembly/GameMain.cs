@@ -34,6 +34,12 @@ public class GameMain : MonoBehaviour
     private static readonly ConcurrentQueue<(int, byte[])> _aot_queue = new ConcurrentQueue<(int, byte[])>();
     private static readonly Queue<(int, byte[])> _aot_pending = new Queue<(int, byte[])>();
 
+    // AOT generic pre-instantiation for UIManager.OpenUI<T> — not needed here.
+    // HotUpdateAssembly already references FrameworkAssembly directly and generates
+    // its own OpenUI<T> generic instances (via LoginSuccessCommand / UIMainMediator etc.).
+    // Adding AOTAssembly → HotUpdateAssembly reference would create an unwanted compile-time
+    // coupling between the AOT entry point and the hot-update assembly.
+
     public static GameMain Instance { get; private set; }
 
     /// <summary>

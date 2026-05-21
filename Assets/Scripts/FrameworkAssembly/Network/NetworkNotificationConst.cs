@@ -11,6 +11,7 @@ public static class NetworkNotificationConst
     public static string NETWORK_DISCONNECTED => Get("NETWORK_DISCONNECTED");
     public static string NETWORK_ERROR => Get("NETWORK_ERROR");
     public static string NETWORK_DISCONNECTED_DIALOG => Get("NETWORK_DISCONNECTED_DIALOG");
+    public static string NETWORK_RECONNECTED => Get("NETWORK_RECONNECTED");
 
     #region Registration
 
@@ -20,6 +21,7 @@ public static class NetworkNotificationConst
         Register("NETWORK_DISCONNECTED", "NETWORK_DISCONNECTED");
         Register("NETWORK_ERROR", "NETWORK_ERROR");
         Register("NETWORK_DISCONNECTED_DIALOG", "NETWORK_DISCONNECTED_DIALOG");
+        Register("NETWORK_RECONNECTED", "NETWORK_RECONNECTED");
     }
 
     public static void Register(string key, string name)

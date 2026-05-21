@@ -101,8 +101,15 @@ public class LuaBootstrap : MonoBehaviour
 
     private void OnDestroy()
     {
-        // LuaEnv is owned by HotUpdateLuaLoader; do not dispose here.
-        // HotUpdateLuaLoader handles its own lifecycle.
+        // Dispose LuaEnv via HotUpdateLuaLoader to release native resources properly.
+        // Previously relied on GC finalizer — explicit Dispose is safer, especially on IL2CPP.
+        if (luaLoader != null)
+        {
+            luaLoader.Dispose();
+            luaLoader = null;
+            Log.d("LuaEnv disposed", "LuaBootstrap");
+        }
+        initialized = false;
         instance = null;
     }
 

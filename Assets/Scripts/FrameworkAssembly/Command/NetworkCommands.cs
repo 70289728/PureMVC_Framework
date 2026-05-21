@@ -70,5 +70,9 @@ public class NetworkConnectedCommand : CommandBase
         proxy.ReconnectAttempts = 0;
         Log.d("Reconnected successfully. Flushing pending messages.", "NetworkConnectedCommand");
         NetworkManager.Instance.FlushPendingMessages();
+
+        // Re-request server-synced data after reconnect (data may be stale after disconnect).
+        NetworkMessageHelper.SendBagList();
+        Facade.SendNotification(NetworkNotificationConst.NETWORK_RECONNECTED);
     }
 }

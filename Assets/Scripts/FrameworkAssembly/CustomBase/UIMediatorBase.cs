@@ -88,6 +88,22 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
         }
     }
 
+    /// <summary>
+    /// Find a UI component by its BindKey. Searches all IUIBind components in the view hierarchy.
+    /// Returns null if not found or type mismatch.
+    /// Lua can call this via mediator:FindComponentByBindKey("Button_CloseBtn").
+    /// </summary>
+    public T FindComponentByBindKey<T>(string bindKey) where T : Component
+    {
+        var binds = viewTrans.GetComponentsInChildren<IUIBind>(true);
+        foreach (var bind in binds)
+        {
+            if (bind.BindKey == bindKey && bind.BoundComponent is T comp)
+                return comp;
+        }
+        return null;
+    }
+
     protected virtual void InitUIComponents()
     {
 
@@ -119,6 +135,26 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
         // Override in subclass if needed
     }
 
+    /// <summary>
+    /// Try invoke a Lua hook for the given hook name.
+    /// Lua file path: LuaScripts/MediatorHook/{mediatorTypeName}.lua
+    /// Lua function name matches hookName.
+    /// Returns true if Lua handled it.
+    /// </summary>
+    protected bool TryLuaHook(string hookName, params object[] args)
+    {
+#if UNITY_EDITOR
+        return false;
+#else
+        var lua = LuaBootstrap.Instance;
+        if (lua == null || !lua.IsInitialized) return false;
+
+        string path = $"LuaScripts/MediatorHook/{GetType().Name}.lua";
+        object result = lua.Call(path, hookName, args);
+        return result is bool b && b;
+#endif
+    }
+
     public virtual void OnShow()
     {
 
@@ -141,7 +177,9 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
         // Register to UpdateManager when showing
         RegisterToUpdateManager();
         
-        OnShow();
+        // Try Lua hook first; if Lua handles it, skip C# OnShow
+        if (!TryLuaHook("OnShow"))
+            OnShow();
     }
 
 
@@ -159,7 +197,9 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
         // Unregister from UpdateManager when hiding
         UnregisterFromUpdateManager();
         
-        OnHide();
+        // Try Lua hook first; if Lua handles it, skip C# OnHide
+        if (!TryLuaHook("OnHide"))
+            OnHide();
     }
 
     public virtual void OnClose()
@@ -169,7 +209,9 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
 
     public virtual void Close()
     {
-        OnClose();
+        // Try Lua hook first; if Lua handles it, skip C# OnClose
+        if (!TryLuaHook("OnClose"))
+            OnClose();
         UnRegisterUIEvents();
         // UnregisterFromUpdateManager is handled by OnRemove (called by RemoveMediator after Close)
 
