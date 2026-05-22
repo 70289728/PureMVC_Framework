@@ -1,0 +1,124 @@
+{
+  "items": [
+    {
+      "id": 1001,
+      "type": 1,
+      "name": "",
+      "desc": "",
+      "category": 1,
+      "triggerEvent": "PlayerLogin",
+      "targetNum": 1,
+      "rewardType": 1,
+      "rewardNum": 100,
+      "nextId": 1002
+    },
+    {
+      "id": 1002,
+      "type": 1,
+      "name": "",
+      "desc": "",
+      "category": 1,
+      "triggerEvent": "PlayerLogin",
+      "targetNum": 3,
+      "rewardType": 1,
+      "rewardNum": 200,
+      "nextId": 1003
+    },
+    {
+      "id": 1003,
+      "type": 1,
+      "name": "",
+      "desc": "",
+      "category": 1,
+      "triggerEvent": "PlayerLogin",
+      "targetNum": 7,
+      "rewardType": 2,
+      "rewardNum": 50,
+      "nextId": 1004
+    },
+    {
+      "id": 1004,
+      "type": 1,
+      "name": "",
+      "desc": "",
+      "category": 1,
+      "triggerEvent": "PlayerLogin",
+      "targetNum": 15,
+      "rewardType": 2,
+      "rewardNum": 100,
+      "nextId": 0
+    },
+    {
+      "id": 1005,
+      "type": 2,
+      "name": "",
+      "desc": "",
+      "category": 2,
+      "triggerEvent": "GoldChange",
+      "targetNum": 100,
+      "rewardType": 1,
+      "rewardNum": 200,
+      "nextId": 1006
+    },
+    {
+      "id": 1006,
+      "type": 2,
+      "name": "",
+      "desc": "",
+      "category": 2,
+      "triggerEvent": "GoldChange",
+      "targetNum": 500,
+      "rewardType": 2,
+      "rewardNum": 50,
+      "nextId": 0
+    },
+    {
+      "id": 1007,
+      "type": 1,
+      "name": "",
+      "desc": "",
+      "category": 2,
+      "triggerEvent": "ShopBuy",
+      "targetNum": 5,
+      "rewardType": 1,
+      "rewardNum": 300,
+      "nextId": 0
+    },
+    {
+      "id": 1008,
+      "type": 1,
+      "name": "",
+      "desc": "",
+      "category": 1,
+      "triggerEvent": "SignIn",
+      "targetNum": 7,
+      "rewardType": 1,
+      "rewardNum": 200,
+      "nextId": 0
+    },
+    {
+      "id": 1009,
+      "type": 1,
+      "name": "",
+      "desc": "",
+      "category": 3,
+      "triggerEvent": "FriendAdd",
+      "targetNum": 3,
+      "rewardType": 1,
+      "rewardNum": 150,
+      "nextId": 0
+    },
+    {
+      "id": 1010,
+      "type": 1,
+      "name": "",
+      "desc": "",
+      "category": 4,
+      "triggerEvent": "ItemGet",
+      "targetNum": 20,
+      "rewardType": 1,
+      "rewardNum": 500,
+      "nextId": 0
+    }
+  ]
+}

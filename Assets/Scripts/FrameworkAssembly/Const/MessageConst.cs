@@ -91,6 +91,14 @@ public static class MessageConst
     public static int SHOP_BUY_C2S  => Get("SHOP_BUY_C2S");
     public static int SHOP_BUY_S2C  => Get("SHOP_BUY_S2C");
 
+    // --- Achievement ---
+    public static int ACHIEVEMENT_LIST_C2S     => Get("ACHIEVEMENT_LIST_C2S");
+    public static int ACHIEVEMENT_LIST_S2C     => Get("ACHIEVEMENT_LIST_S2C");
+    public static int ACHIEVEMENT_PROGRESS_S2C => Get("ACHIEVEMENT_PROGRESS_S2C");
+    public static int ACHIEVEMENT_UNLOCK_S2C   => Get("ACHIEVEMENT_UNLOCK_S2C");
+    public static int ACHIEVEMENT_CLAIM_C2S    => Get("ACHIEVEMENT_CLAIM_C2S");
+    public static int ACHIEVEMENT_CLAIM_S2C    => Get("ACHIEVEMENT_CLAIM_S2C");
+
     #region Registration
 
     static MessageConst()
@@ -151,6 +159,12 @@ public static class MessageConst
         Register("SHOP_LIST_S2C", 25002);
         Register("SHOP_BUY_C2S", 25003);
         Register("SHOP_BUY_S2C", 25004);
+        Register("ACHIEVEMENT_LIST_C2S", 26001);
+        Register("ACHIEVEMENT_LIST_S2C", 26002);
+        Register("ACHIEVEMENT_PROGRESS_S2C", 26003);
+        Register("ACHIEVEMENT_UNLOCK_S2C", 26004);
+        Register("ACHIEVEMENT_CLAIM_C2S", 26005);
+        Register("ACHIEVEMENT_CLAIM_S2C", 26006);
     }
 
     /// <summary>

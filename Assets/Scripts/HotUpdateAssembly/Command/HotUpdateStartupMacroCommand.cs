@@ -33,6 +33,7 @@ public class RegisterHotUpdateProxiesCommand : CommandBase
     protected override void OnExecute(INotification notification)
     {
         Facade.RegisterProxy(new PlayerExtProxy());
+        Facade.RegisterProxy(new AchievementProxy());
 
         Log.d("Hot-update proxies registered", "RegisterHotUpdateProxiesCommand");
     }

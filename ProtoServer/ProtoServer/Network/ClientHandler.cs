@@ -308,6 +308,11 @@ public class ClientHandler : IDisposable
                         await PushBagListAsync();
                         // Push shop data after login
                         await PushShopListAsync();
+                        // Init achievement progress and push after login
+                        AchievementChecker.InitProgress(pd);
+                        await CheckAndPushAchievements(pd, "PlayerLogin", 1);
+                        await _server.DataStore.SavePlayerDataAsync(AccountId, pd);
+                        await PushAchievementListAsync();
                     }
                     else
                     {
@@ -478,6 +483,9 @@ public class ClientHandler : IDisposable
                     }
                     await _server.DataStore.SavePlayerDataAsync(AccountId, replyData);
                     await SendMessageAsync(EMessageType.FRIEND_REPLY_S2C, replyAck);
+
+                    if (replyMsg.Agree)
+                        await CheckAndPushAchievements(replyData, "FriendAdd", 1);
                     break;
 
                 case EMessageType.FRIEND_LIST_C2S:
@@ -618,6 +626,9 @@ public class ClientHandler : IDisposable
                     var signAck = ProcessSignIn(signData);
                     await _server.DataStore.SavePlayerDataAsync(AccountId, signData);
                     await SendMessageAsync(EMessageType.SIGNIN_DO_S2C, signAck);
+
+                    if (signAck.Rst.Result)
+                        await CheckAndPushAchievements(signData, "SignIn", 1);
                     break;
 
                 case EMessageType.SIGNIN_MAKEUP_C2S:
@@ -647,6 +658,9 @@ public class ClientHandler : IDisposable
                     var sellAck = ProcessBagSell(sellData, sellMsg.ItemId, sellMsg.Count);
                     await _server.DataStore.SavePlayerDataAsync(AccountId, sellData);
                     await SendMessageAsync(EMessageType.BAG_SELL_S2C, sellAck);
+
+                    if (sellAck.Rst.Result)
+                        await CheckAndPushAchievements(sellData, "GoldChange", sellData.Gold);
                     break;
 
                 // ── Shop ──
@@ -661,6 +675,28 @@ public class ClientHandler : IDisposable
                     var shopBuyAck = ProcessShopBuy(shopBuyData, shopBuyMsg.ShopItemId);
                     await _server.DataStore.SavePlayerDataAsync(AccountId, shopBuyData);
                     await SendMessageAsync(EMessageType.SHOP_BUY_S2C, shopBuyAck);
+
+                    // Trigger achievement checks after shop buy
+                    if (shopBuyAck.Rst.Result)
+                    {
+                        await CheckAndPushAchievements(shopBuyData, "ShopBuy", 1);
+                        await CheckAndPushAchievements(shopBuyData, "GoldChange", shopBuyData.Gold);
+                        await CheckAndPushAchievements(shopBuyData, "ItemGet", 1);
+                    }
+                    break;
+
+                // ── Achievement ──
+
+                case EMessageType.ACHIEVEMENT_LIST_C2S:
+                    await PushAchievementListAsync();
+                    break;
+
+                case EMessageType.ACHIEVEMENT_CLAIM_C2S:
+                    var claimMsg = AchievementClaimC2S.Parser.ParseFrom(messageBody);
+                    var claimData = await _server.DataStore.GetPlayerDataAsync(AccountId);
+                    var claimAck = ProcessAchievementClaim(claimData, claimMsg.Id);
+                    await _server.DataStore.SavePlayerDataAsync(AccountId, claimData);
+                    await SendMessageAsync(EMessageType.ACHIEVEMENT_CLAIM_S2C, claimAck);
                     break;
 
                 default:
@@ -1011,6 +1047,84 @@ public class ClientHandler : IDisposable
     private class ShopConfigWrapper
     {
         public List<ShopItem> items;
+    }
+
+    // ── Achievement ──
+
+    private async Task PushAchievementListAsync()
+    {
+        var pd = await _server.DataStore.GetPlayerDataAsync(AccountId);
+        var list = AchievementChecker.BuildInfoList(pd);
+        var ack = new AchievementListS2C();
+        ack.Achievements.AddRange(list);
+        Console.WriteLine($"[ClientHandler] Pushing achievement data to account {AccountId}: {list.Count} achievements");
+        await SendMessageAsync(EMessageType.ACHIEVEMENT_LIST_S2C, ack);
+    }
+
+    /// <summary>
+    /// Check achievements for a trigger event and push updates to client.
+    /// Caller must save PlayerData after calling this.
+    /// </summary>
+    private async Task CheckAndPushAchievements(PlayerData pd, string triggerEvent, int value)
+    {
+        var changed = AchievementChecker.Check(pd, triggerEvent, value);
+        foreach (var (id, progress, target, status) in changed)
+        {
+            var update = new AchievementProgressS2C
+            {
+                Id = id,
+                Progress = progress,
+                Target = target,
+                Status = status
+            };
+            await SendMessageAsync(EMessageType.ACHIEVEMENT_PROGRESS_S2C, update);
+
+            if (status == 1) // newly unlocked
+            {
+                var unlock = new AchievementUnlockS2C { Id = id };
+                await SendMessageAsync(EMessageType.ACHIEVEMENT_UNLOCK_S2C, unlock);
+                Console.WriteLine($"[ClientHandler] Achievement unlocked: {id} for account {AccountId}");
+            }
+        }
+    }
+
+    private static AchievementClaimS2C ProcessAchievementClaim(PlayerData pd, int achievementId)
+    {
+        // Validate: must be in unlocked list
+        if (!pd.UnlockedAchievements.Contains(achievementId))
+            return new AchievementClaimS2C
+            {
+                Rst = new S2CResult { Result = false, ErrCode = 1 },
+                Id = achievementId
+            };
+
+        // Find config
+        var cfg = AchievementChecker.Configs.Find(c => c.id == achievementId);
+        if (cfg == null)
+            return new AchievementClaimS2C
+            {
+                Rst = new S2CResult { Result = false, ErrCode = 2 },
+                Id = achievementId
+            };
+
+        // Move from unlocked to claimed
+        pd.UnlockedAchievements.Remove(achievementId);
+        if (!pd.ClaimedAchievements.Contains(achievementId))
+            pd.ClaimedAchievements.Add(achievementId);
+
+        // Grant reward
+        if (cfg.rewardType == 1) pd.Gold += cfg.rewardNum;
+        else if (cfg.rewardType == 2) pd.Diamond += cfg.rewardNum;
+
+        Console.WriteLine($"[ClientHandler] Achievement claimed: {achievementId}, reward: type={cfg.rewardType} count={cfg.rewardNum}");
+
+        return new AchievementClaimS2C
+        {
+            Rst = new S2CResult { Result = true },
+            Id = achievementId,
+            RewardType = cfg.rewardType,
+            RewardCount = cfg.rewardNum
+        };
     }
 
     internal void Disconnect()

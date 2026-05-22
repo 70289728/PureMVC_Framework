@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+import "network_module.proto";
+
+// ── Achievement info (single achievement state) ──
+message AchievementInfo {
+    int32 id = 1;
+    int32 progress = 2;   // current progress value
+    int32 target = 3;     // target value to complete
+    int32 status = 4;     // 0: in progress, 1: completed (unclaimed), 2: claimed
+}
+
+// ── Full list (pushed after login) ──
+message AchievementListC2S {}
+message AchievementListS2C {
+    repeated AchievementInfo achievements = 1;
+}
+
+// ── Progress update (pushed when progress changes) ──
+message AchievementProgressS2C {
+    int32 id = 1;
+    int32 progress = 2;
+    int32 target = 3;
+    int32 status = 4;
+}
+
+// ── Unlock notify (pushed when achievement completed) ──
+message AchievementUnlockS2C {
+    int32 id = 1;
+}
+
+// ── Claim reward ──
+message AchievementClaimC2S {
+    int32 id = 1;
+}
+message AchievementClaimS2C {
+    S2CResult rst = 1;
+    int32 id = 2;
+    int32 rewardType = 3;   // 1: gold, 2: diamond
+    int32 rewardCount = 4;
+}

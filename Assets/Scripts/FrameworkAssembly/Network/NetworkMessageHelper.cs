@@ -207,4 +207,16 @@ public static class NetworkMessageHelper
 
     public static ShopListS2C ParseShopListS2C(byte[] body) => ShopListS2C.Parser.ParseFrom(body);
     public static ShopBuyS2C ParseShopBuyS2C(byte[] body) => ShopBuyS2C.Parser.ParseFrom(body);
+
+    // -------------------------------------------------------------------------
+    // Achievement
+    // -------------------------------------------------------------------------
+
+    public static void SendAchievementList() => Net.Send(MessageConst.ACHIEVEMENT_LIST_C2S, new AchievementListC2S());
+    public static void SendAchievementClaim(int achievementId) => Net.Send(MessageConst.ACHIEVEMENT_CLAIM_C2S, new AchievementClaimC2S { Id = achievementId });
+
+    public static AchievementListS2C ParseAchievementListS2C(byte[] body) => AchievementListS2C.Parser.ParseFrom(body);
+    public static AchievementProgressS2C ParseAchievementProgressS2C(byte[] body) => AchievementProgressS2C.Parser.ParseFrom(body);
+    public static AchievementUnlockS2C ParseAchievementUnlockS2C(byte[] body) => AchievementUnlockS2C.Parser.ParseFrom(body);
+    public static AchievementClaimS2C ParseAchievementClaimS2C(byte[] body) => AchievementClaimS2C.Parser.ParseFrom(body);
 }

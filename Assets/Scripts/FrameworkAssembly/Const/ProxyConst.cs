@@ -11,6 +11,7 @@ public static class ProxyConst
     public static string USER_PROXY => Get("USER_PROXY");
     public static string SHOP_PROXY => Get("SHOP_PROXY");
     public static string BAG_PROXY => Get("BAG_PROXY");
+    public static string ACHIEVEMENT_PROXY => Get("ACHIEVEMENT_PROXY");
 
     #region Registration
 
@@ -19,6 +20,7 @@ public static class ProxyConst
         Register("USER_PROXY", "UserProxy");
         Register("SHOP_PROXY", "ShopProxy");
         Register("BAG_PROXY", "BagProxy");
+        Register("ACHIEVEMENT_PROXY", "AchievementProxy");
     }
 
     /// <summary>

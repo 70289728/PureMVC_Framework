@@ -66,6 +66,14 @@ public class PlayerData
     public Dictionary<int, int> ShopBuyRecords { get; set; } = new Dictionary<int, int>();
 
     #endregion
+
+    #region Achievement Fields (achievement.proto)
+
+    public Dictionary<int, int> AchievementProgress { get; set; } = new Dictionary<int, int>();
+    public List<int> UnlockedAchievements { get; set; } = new List<int>();
+    public List<int> ClaimedAchievements { get; set; } = new List<int>();
+
+    #endregion
 }
 
 public class FriendApplyEntry
