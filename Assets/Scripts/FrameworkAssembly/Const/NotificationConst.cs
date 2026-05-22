@@ -107,6 +107,8 @@ public static class NotificationConst
 
     // --- UI ---
     public static string SHOW_TIP => Get("SHOW_TIP");
+    public static string SHOW_DIALOG => Get("SHOW_DIALOG");
+    public static string CLOSE_DIALOG => Get("CLOSE_DIALOG");
     public static string OPEN_PANEL => Get("OPEN_PANEL");
     public static string CLOSE_PANEL => Get("CLOSE_PANEL");
 
@@ -181,7 +183,7 @@ public static class NotificationConst
         Register("CHANGE_FASHION");
         Register("UPDATE_SETTING");
         Register("NEXT_DIALOG");
-        Register("SHOW_TIP"); Register("OPEN_PANEL"); Register("CLOSE_PANEL");
+        Register("SHOW_TIP"); Register("SHOW_DIALOG"); Register("CLOSE_DIALOG"); Register("OPEN_PANEL"); Register("CLOSE_PANEL");
         Register("HOT_UPDATE_CHECK"); Register("HOT_UPDATE_PROGRESS"); Register("HOT_UPDATE_SUCCESS"); Register("HOT_UPDATE_FAILED"); Register("HOT_UPDATE_STATE_CHANGED"); Register("HOT_UPDATE_NEED_RESTART");
         Register("HOT_UPDATE_AVAILABLE");
         Register("FRIEND_SEARCH_RESULT"); Register("FRIEND_APPLY_RESULT"); Register("FRIEND_APPLY_LIST_UPDATED");

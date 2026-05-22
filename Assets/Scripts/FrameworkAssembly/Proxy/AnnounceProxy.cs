@@ -54,6 +54,9 @@ public class AnnounceProxy : ProxyBase
             if (idx >= 0) Announces[idx] = resp.Announce;
             else Announces.Insert(0, resp.Announce);
             Log.d($"Announce notify: {resp.Announce.Title}", NAME);
+
+            // Server-pushed announcement — show as a modal dialog
+            DialogManager.Instance.ShowInfo(resp.Announce.Title, resp.Announce.Content);
         }
         SendNotification(NotificationConst.ANNOUNCE_NOTIFY, resp);
     }

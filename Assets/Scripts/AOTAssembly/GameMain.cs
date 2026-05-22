@@ -376,6 +376,8 @@ public class GameMain : MonoBehaviour
         var gameSceneManagerType = ResolveFrameworkType("GameSceneManager");
         var saveManagerType = ResolveFrameworkType("SaveManager");
         var configManagerType = ResolveFrameworkType("ConfigManager");
+        var redDotManagerType = ResolveFrameworkType("RedDotManager");
+        var dialogManagerType = ResolveFrameworkType("DialogManager");
 
         GetInstance(updateManagerType);
         GetInstance(timerManagerType);
@@ -384,6 +386,16 @@ public class GameMain : MonoBehaviour
         GetInstance(gameSceneManagerType);
         GetInstance(saveManagerType);
         GetInstance(configManagerType);
+        GetInstance(redDotManagerType);
+        GetInstance(dialogManagerType);
+
+        // RedDotManager.Initialize() — register tree from config
+        var redDotMgr = GetInstance(redDotManagerType);
+        CallMethod(redDotMgr, "Initialize");
+
+        // DialogManager.Initialize() — prepare dialog queue system
+        var dialogMgr = GetInstance(dialogManagerType);
+        CallMethod(dialogMgr, "Initialize");
 
         // UIManager.Init()
         var uiMgr = GetInstance(_uiManagerType);
@@ -441,6 +453,11 @@ public class GameMain : MonoBehaviour
         var assetLoaderProp = _hotUpdateManagerType?.GetProperty("AssetLoader", BindingFlags.Public | BindingFlags.Instance);
         var assetLoader = assetLoaderProp?.GetValue(hotUpdateMgr);
         CallMethod(assetMgr, "SetAssetLoader", assetLoader);
+
+        // Reload red dot tree if hot update delivered a new RedDotTree.json
+        var redDotMgrType = ResolveFrameworkType("RedDotManager");
+        var redDotMgrInstance = GetInstance(redDotMgrType);
+        CallMethod(redDotMgrInstance, "ReloadTree");
 #endif
 
         // Open login only if no restart is needed.
