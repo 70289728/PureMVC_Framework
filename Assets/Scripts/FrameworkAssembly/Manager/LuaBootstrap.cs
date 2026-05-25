@@ -37,9 +37,10 @@ public class LuaBootstrap : MonoBehaviour
     private HotUpdateLuaLoader luaLoader;
     private bool initialized = false;
 
-    /// <summary>Calls LuaEnv.FullGc every N ticks.</summary>
-    [SerializeField] private int gcInterval = 100;
-    private int tickCount = 0;
+    /// <summary>Calls LuaEnv.FullGc only when memory exceeds threshold (checked every N seconds).</summary>
+    [SerializeField] private float gcCheckIntervalSec = 20f;   // Check interval in seconds
+    [SerializeField] private int gcMemoryThresholdKB = 2048;    // Trigger GC when Lua memory > 2MB
+    private float gcCheckTimer = 0f;
 
     public bool IsInitialized => initialized;
     public HotUpdateLuaLoader Loader => luaLoader;
@@ -74,12 +75,18 @@ public class LuaBootstrap : MonoBehaviour
         if (!initialized) return;
 
         luaLoader.Tick();
-        tickCount++;
 
-        if (tickCount >= gcInterval)
+        gcCheckTimer += Time.unscaledDeltaTime;
+        if (gcCheckTimer >= gcCheckIntervalSec)
         {
-            tickCount = 0;
-            luaLoader.FullGc();
+            gcCheckTimer = 0f;
+            int memKB = luaLoader.MemoryKB;
+            if (memKB > gcMemoryThresholdKB)
+            {
+                luaLoader.FullGc();
+                int afterKB = luaLoader.MemoryKB;
+                Log.d($"Lua GC triggered: {memKB}KB → {afterKB}KB (threshold={gcMemoryThresholdKB}KB)", "LuaBootstrap");
+            }
         }
     }
 

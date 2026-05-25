@@ -32,6 +32,7 @@ public class HotUpdateLuaLoader : ILuaLoader, IDisposable
     private MethodInfo doStringTextMethod;
     private MethodInfo tickMethod;
     private MethodInfo fullGcMethod;
+    private PropertyInfo memoryProperty;
     private MethodInfo disposeMethod;
 
     // ── Delegates ──
@@ -122,6 +123,7 @@ public class HotUpdateLuaLoader : ILuaLoader, IDisposable
 
         tickMethod = luaEnvType.GetMethod("Tick", Type.EmptyTypes);
         fullGcMethod = luaEnvType.GetMethod("FullGc", Type.EmptyTypes);
+        memoryProperty = luaEnvType.GetProperty("Memroy"); // xLua typo: 'Memroy' not 'Memory'
         disposeMethod = luaEnvType.GetMethod("Dispose", Type.EmptyTypes);
 
         // Register file loader by injecting a C# function into Lua's package.searchers.
@@ -379,6 +381,20 @@ public class HotUpdateLuaLoader : ILuaLoader, IDisposable
     public void FullGc()
     {
         if (luaEnv != null && !disposed) fullGcMethod?.Invoke(luaEnv, null);
+    }
+
+    /// <summary>
+    /// Current Lua memory usage in KB (via LuaEnv.Memroy).
+    /// Returns -1 if unavailable.
+    /// </summary>
+    public int MemoryKB
+    {
+        get
+        {
+            if (luaEnv == null || disposed || memoryProperty == null) return -1;
+            try { return (int)(long)memoryProperty.GetValue(luaEnv); }
+            catch { return -1; }
+        }
     }
 
     public void ClearCache()
