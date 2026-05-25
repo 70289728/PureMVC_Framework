@@ -72,11 +72,19 @@ namespace PureMVC.Core
         /// </summary>
         /// <param name="factory">the <c>FuncDelegate</c> of the <c>IModel</c></param>
         /// <returns>the instance for this Singleton key </returns>
+        private static readonly object _instanceLock = new object();
+
         public static IModel GetInstance(Func<IModel> factory)
         {
             if (instance == null)
             {
-                instance = factory();
+                lock (_instanceLock)
+                {
+                    if (instance == null)
+                    {
+                        instance = factory();
+                    }
+                }
             }
             return instance;
         }

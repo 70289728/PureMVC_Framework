@@ -2,6 +2,7 @@ using Config;
 using Google.Protobuf;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -26,6 +27,12 @@ public class ClientHandler : IDisposable
     private DateTime _lastHeartbeatTime = DateTime.UtcNow;
     private static readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(60);
 
+    // Rate limiting: sliding-window per-client message count
+    private static readonly ConcurrentDictionary<string, RateLimitEntry> _rateLimitMap =
+        new ConcurrentDictionary<string, RateLimitEntry>();
+    private static readonly TimeSpan RateLimitWindow = TimeSpan.FromSeconds(1);
+    private const int RateLimitMaxMessages = 100;
+
     public string ClientId { get; } = Guid.NewGuid().ToString();
     public long AccountId { get; set; } = 0;
     public string RemoteEndPoint => _client.Client.RemoteEndPoint?.ToString() ?? "unknown";
@@ -44,7 +51,7 @@ public class ClientHandler : IDisposable
     {
         if (_isDisposed)
         {
-            Console.WriteLine($"[ClientHandler] client {ClientId} disposed，cannot start listen");
+            Console.WriteLine($"[ClientHandler] client {ClientId} disposed, cannot start listen");
             return;
         }
 
@@ -66,7 +73,7 @@ public class ClientHandler : IDisposable
                 int typeRead = await ReadExactlyAsync(_stream, typeBuffer, 0, 4, _cancellationToken);
                 if (typeRead < 4)
                 {
-                    Console.WriteLine($"[ClientHandler] client {ClientId} disconnected（message typeread failed）");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} disconnected (message type read failed)");
                     Disconnect();
                     break;
                 }
@@ -74,7 +81,7 @@ public class ClientHandler : IDisposable
                 int typeInt = BitConverter.ToInt32(typeBuffer, 0);
                 if (!Enum.IsDefined(typeof(EMessageType), typeInt))
                 {
-                    Console.WriteLine($"[ClientHandler] client {ClientId} invalidmessage type: {typeInt}");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} invalid message type: {typeInt}");
                     Disconnect();
                     break;
                 }
@@ -85,7 +92,7 @@ public class ClientHandler : IDisposable
                 int lengthRead = await ReadExactlyAsync(_stream, lengthBuffer, 0, 4, _cancellationToken);
                 if (lengthRead < 4)
                 {
-                    Console.WriteLine($"[ClientHandler] client {ClientId} disconnected（messagelengthread failed）");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} disconnected (message length read failed)");
                     Disconnect();
                     break;
                 }
@@ -95,7 +102,7 @@ public class ClientHandler : IDisposable
                 // Anti-abuse: limit message body max 1MB, min 1 byte
                 if (msgLength <= 0 || msgLength > 1024 * 1024)
                 {
-                    Console.WriteLine($"[ClientHandler] client {ClientId} invalidmessagelength: {msgLength}（exceeds 1MB limit）");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} invalid message length: {msgLength} (exceeds 1MB limit)");
                     Disconnect();
                     break;
                 }
@@ -105,7 +112,7 @@ public class ClientHandler : IDisposable
                 int bodyRead = await ReadExactlyAsync(_stream, msgBuffer, 0, msgLength, _cancellationToken);
                 if (bodyRead < msgLength)
                 {
-                    Console.WriteLine($"[ClientHandler] client {ClientId} disconnected（message bodyread incomplete）");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} disconnected (message body read incomplete)");
                     Disconnect();
                     break;
                 }
@@ -115,17 +122,17 @@ public class ClientHandler : IDisposable
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine($"[ClientHandler] Unityclient {ClientId} listen cancelled");
+                Console.WriteLine($"[ClientHandler] client {ClientId} listen cancelled");
                 break;
             }
             catch (ObjectDisposedException)
             {
-                Console.WriteLine($"[ClientHandler] client {ClientId} stream disposed，stop listening");
+                Console.WriteLine($"[ClientHandler] client {ClientId} stream disposed, stop listening");
                 break;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ClientHandler] Unityclient {ClientId} message read error: {ex.Message}");
+                Console.WriteLine($"[ClientHandler] Unity client {ClientId} message read error: {ex.Message}");
                 Disconnect();
                 break;
             }
@@ -142,7 +149,7 @@ public class ClientHandler : IDisposable
                 await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
                 if (DateTime.UtcNow - _lastHeartbeatTime > HeartbeatTimeout)
                 {
-                    Console.WriteLine($"[ClientHandler] client {ClientId} heartbeat timeout（>{HeartbeatTimeout.TotalSeconds}s），force-disconnect");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} heartbeat timeout (> {HeartbeatTimeout.TotalSeconds}s), force disconnect");
                     Disconnect();
                     break;
                 }
@@ -173,7 +180,7 @@ public class ClientHandler : IDisposable
     }
 
     /// <summary>
-    /// send message to client（packed in new format）
+    /// send message to client (packed in new format)
     /// </summary>
     /// <param name="messageType">message type</param>
     /// <param name="message">protobufmessage body</param>
@@ -191,7 +198,7 @@ public class ClientHandler : IDisposable
         }
         if (message == null)
         {
-            Console.WriteLine($"send failed: client {ClientId} message bodyis empty");
+            Console.WriteLine($"send failed: client {ClientId} message body is empty");
             return;
         }
 
@@ -203,7 +210,7 @@ public class ClientHandler : IDisposable
             byte[] bodyBytes = message.ToByteArray();
             if (bodyBytes.Length > 1024 * 1024)
             {
-                Console.WriteLine($"send failed: client {ClientId} message bodyexceeds 1MB limit");
+                Console.WriteLine($"send failed: client {ClientId} message body exceeds 1MB limit");
                 return;
             }
 
@@ -244,7 +251,15 @@ public class ClientHandler : IDisposable
     {
         if (messageBody == null || messageBody.Length == 0)
         {
-            Console.WriteLine($"[ClientHandler] client {ClientId} message bodyis empty，skipprocess");
+            Console.WriteLine($"[ClientHandler] client {ClientId} message body is empty, skip process");
+            return;
+        }
+
+        // Rate limit check — sliding window per client
+        if (!CheckRateLimit())
+        {
+            Console.WriteLine($"[ClientHandler] client {ClientId} exceeded rate limit ({RateLimitMaxMessages}/s), disconnecting");
+            Disconnect();
             return;
         }
 
@@ -704,13 +719,13 @@ public class ClientHandler : IDisposable
                     break;
 
                 default:
-                    Console.WriteLine($"[ClientHandler] client {ClientId} unknownmessage type：{messageType}");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} unknown message type: {messageType}");
                     break;
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ClientHandler] client {ClientId} messageparseerror: {ex.Message}");
+            Console.WriteLine($"[ClientHandler] client {ClientId} message parse error: {ex.Message}");
         }
 
         await Task.CompletedTask;
@@ -1164,6 +1179,37 @@ public class ClientHandler : IDisposable
             RewardType = cfg.rewardType,
             RewardCount = cfg.rewardNum
         };
+    }
+
+    /// <summary>
+    /// Sliding-window rate limit check per client.
+    /// Returns true if within limit, false if exceeded.
+    /// Thread-safe via Interlocked operations on the count.
+    /// </summary>
+    private bool CheckRateLimit()
+    {
+        var now = DateTime.UtcNow;
+        var entry = _rateLimitMap.GetOrAdd(ClientId, _ => new RateLimitEntry { WindowStart = now });
+
+        lock (entry)
+        {
+            if (now - entry.WindowStart > RateLimitWindow)
+            {
+                // Window expired, reset
+                entry.WindowStart = now;
+                Interlocked.Exchange(ref entry.Count, 1);
+                return true;
+            }
+
+            int newCount = Interlocked.Increment(ref entry.Count);
+            return newCount <= RateLimitMaxMessages;
+        }
+    }
+
+    private class RateLimitEntry
+    {
+        public DateTime WindowStart;
+        public int Count = 1;
     }
 
     internal void Disconnect()

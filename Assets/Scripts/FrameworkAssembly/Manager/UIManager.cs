@@ -12,7 +12,7 @@ public enum EUILayer
     FirstLayer = 2,
     SecondLayer = 3,
     ThirdLayer = 4,
-    ForthLayer = 5,
+    FourthLayer = 5,
     GuideLayer = 6
 }
 
@@ -21,16 +21,20 @@ public class UIManager
 {
     #region Singleton
     private static UIManager instance;
+    private static readonly object _instanceLock = new object();
     public static UIManager Instance
     {
         get
         {
             if (instance == null)
             {
-                instance = new UIManager();
-                //GameObject obj = new GameObject("UIManager");
-                //instance = obj.AddComponent<UIManager>();
-                //DontDestroyOnLoad(obj);
+                lock (_instanceLock)
+                {
+                    if (instance == null)
+                    {
+                        instance = new UIManager();
+                    }
+                }
             }
             return instance;
         }
@@ -43,7 +47,7 @@ public class UIManager
         layerTransPath[EUILayer.FirstLayer] = UIConst.FIRST_CANVAS;
         layerTransPath[EUILayer.SecondLayer] = UIConst.SECOND_CANVAS;
         layerTransPath[EUILayer.ThirdLayer] = UIConst.THIRD_CANVAS;
-        layerTransPath[EUILayer.ForthLayer] = UIConst.FORTH_CANVAS;
+        layerTransPath[EUILayer.FourthLayer] = UIConst.FORTH_CANVAS;
         layerTransPath[EUILayer.GuideLayer] = UIConst.GUIDE_CANVAS;
         layerTransDic = new Dictionary<EUILayer, Transform>();
         uiMediatorDic = new Dictionary<string, UIMediatorBase>();
@@ -94,10 +98,16 @@ public class UIManager
             var targetTrans = trans.Find(item.Value);
             if (targetTrans == null)
             {
-                Log.e($"Layer not found: {item.Value}");
-                return;
+                Log.w($"Layer not found, skipped: {item.Value}");
+                continue;
             }
             layerTransDic[item.Key] = targetTrans;
+        }
+        // Fatal: MainLayer must exist for UI system to function
+        if (!layerTransDic.ContainsKey(EUILayer.MainLayer))
+        {
+            Log.e("MainLayer not found, UI system cannot function");
+            return;
         }
         uiRoot = trans;
         UnityEngine.Object.DontDestroyOnLoad(uiRoot.parent);
@@ -256,17 +266,16 @@ public class UIManager
 
         if (uiStack.Contains(uiName))
         {
-            Stack<string> tempStack = new Stack<string>();
+            // Collect items above target without allocating a temp Stack
+            var tempList = new List<string>();
             while (uiStack.Count > 0)
             {
                 string top = uiStack.Pop();
                 if (top == uiName) break;
-                tempStack.Push(top);
+                tempList.Add(top);
             }
-            while (tempStack.Count > 0)
-            {
-                uiStack.Push(tempStack.Pop());
-            }
+            for (int i = tempList.Count - 1; i >= 0; i--)
+                uiStack.Push(tempList[i]);
         }
 
         if (showLastUI && uiStack.Count > 0)
@@ -287,7 +296,9 @@ public class UIManager
 
     public void CloseAllUI()
     {
-        foreach (var m in uiMediatorDic.Values)
+        // Snapshot to avoid collection-modified-during-enumeration
+        var mediators = new List<UIMediatorBase>(uiMediatorDic.Values);
+        foreach (var m in mediators)
         {
             m.Close();
             pureMvcFacade.RemoveMediator(m.MediatorName);

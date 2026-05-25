@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -41,6 +42,30 @@ public class HotUpdateLuaLoader : ILuaLoader, IDisposable
     private readonly Dictionary<string, string> textCache = new Dictionary<string, string>();
     private readonly Dictionary<string, string> moduleNameToPath = new Dictionary<string, string>();
     private bool disposed;
+
+    // ── Lua Security ──
+    // Expected SHA256 hashes for hot-updated Lua files (key = relative path, value = hex hash).
+    // Populated by HotUpdateManager after downloading and verifying the Lua bundle manifest.
+    // Phase 2: manifest itself will be RSA-signed.
+    private static readonly Dictionary<string, string> _expectedHashes = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Set the expected SHA256 hashes for Lua file integrity verification.
+    /// Called by HotUpdateManager after downloading the Lua bundle.
+    /// </summary>
+    public static void SetExpectedHashes(Dictionary<string, string> hashes)
+    {
+        lock (_expectedHashes)
+        {
+            _expectedHashes.Clear();
+            if (hashes != null)
+            {
+                foreach (var kv in hashes)
+                    _expectedHashes[kv.Key] = kv.Value;
+            }
+        }
+        Log.d($"Lua expected hashes set: {_expectedHashes.Count} entries", "HotUpdateLuaLoader");
+    }
 
     // ──────────────────────────────────────────────
     //  Construction & Reflection Init
@@ -197,9 +222,12 @@ public class HotUpdateLuaLoader : ILuaLoader, IDisposable
 
     /// <summary>
     /// Try to load {path}.lua.enc first, then {path}.lua. Auto-decrypt .lua.enc.
+    /// For files loaded from persistentDataPath, verifies SHA256 against expected hashes.
     /// </summary>
     private static byte[] TryLoadFile(string basePath)
     {
+        bool isHotUpdate = basePath.Contains(Application.persistentDataPath);
+
         // Try encrypted first
         string encPath = basePath + ".lua.enc";
         if (basePath.Contains("://") || basePath.StartsWith("jar:"))
@@ -212,13 +240,62 @@ public class HotUpdateLuaLoader : ILuaLoader, IDisposable
         }
 
         if (File.Exists(encPath))
-            return AesHelper.Decrypt(File.ReadAllBytes(encPath));
+        {
+            byte[] raw = File.ReadAllBytes(encPath);
+            if (isHotUpdate && !VerifyLuaHash(encPath, raw))
+            {
+                Log.e($"Lua file integrity check FAILED: {encPath}", "HotUpdateLuaLoader");
+                return null;
+            }
+            return AesHelper.Decrypt(raw);
+        }
 
         string luaPath = basePath + ".lua";
         if (File.Exists(luaPath))
-            return File.ReadAllBytes(luaPath);
+        {
+            byte[] raw = File.ReadAllBytes(luaPath);
+            if (isHotUpdate && !VerifyLuaHash(luaPath, raw))
+            {
+                Log.e($"Lua file integrity check FAILED: {luaPath}", "HotUpdateLuaLoader");
+                return null;
+            }
+            return raw;
+        }
 
         return null;
+    }
+
+    /// <summary>
+    /// Verify the SHA256 of a Lua file against the expected hash.
+    /// If no expected hash is registered for this path, skip verification.
+    /// Returns true if verified or skipped, false if hash mismatch.
+    /// </summary>
+    private static bool VerifyLuaHash(string filePath, byte[] data)
+    {
+        string relativeName = Path.GetFileName(filePath);
+        string expectedHash = null;
+        bool hasEntry = false;
+
+        lock (_expectedHashes)
+        {
+            hasEntry = _expectedHashes.TryGetValue(relativeName, out expectedHash);
+        }
+
+        if (!hasEntry)
+            return true; // No expected hash registered — skip verification
+
+        using (var sha256 = SHA256.Create())
+        {
+            byte[] hashBytes = sha256.ComputeHash(data);
+            string actualHash = BitConverter.ToString(hashBytes).Replace("-", "").ToLowerInvariant();
+            bool match = string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase);
+            if (!match)
+            {
+                Log.e($"Lua hash mismatch: {relativeName}\n  Expected: {expectedHash}\n  Actual:   {actualHash}",
+                    "HotUpdateLuaLoader");
+            }
+            return match;
+        }
     }
 
     /// <summary>

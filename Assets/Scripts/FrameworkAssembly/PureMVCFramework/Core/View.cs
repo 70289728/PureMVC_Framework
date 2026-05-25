@@ -73,11 +73,19 @@ namespace PureMVC.Core
         /// </summary>
         /// <param name="factory">the <c>FuncDelegate</c> of the <c>IView</c></param>
         /// <returns>the instance for this Singleton key </returns>
+        private static readonly object _instanceLock = new object();
+
         public static IView GetInstance(Func<IView> factory)
         {
             if (instance == null)
             {
-                instance = factory();
+                lock (_instanceLock)
+                {
+                    if (instance == null)
+                    {
+                        instance = factory();
+                    }
+                }
             }
             return instance;
         }
@@ -88,11 +96,16 @@ namespace PureMVC.Core
         /// </summary>
         /// <param name="notificationName">the name of the <c>INotifications</c> to notify this <c>IObserver</c> of</param>
         /// <param name="observer">the <c>IObserver</c> to register</param>
+        private readonly object _observerLock = new object();
+
         public virtual void RegisterObserver(string notificationName, IObserver observer)
         {
             if (observerMap.TryGetValue(notificationName, out var observers))
             {
-                observers.Add(observer);
+                lock (_observerLock)
+                {
+                    observers.Add(observer);
+                }
             }
             else
             {
@@ -121,9 +134,17 @@ namespace PureMVC.Core
                 var observers = new List<IObserver>(observersRef);
 
                 // Notify Observers from the working array
+                // Wrap each observer in try-catch so one crashing observer doesn't break others
                 foreach (var observer in observers)
                 {
-                    observer.NotifyObserver(notification);
+                    try
+                    {
+                        observer.NotifyObserver(notification);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.e($"Observer [{observer.GetType().Name}] threw on notification [{notification.Name}]: {ex}", "View");
+                    }
                 }
             }
         }
@@ -138,15 +159,18 @@ namespace PureMVC.Core
             // the observer list for the notification under inspection
             if (observerMap.TryGetValue(notificationName, out var observers))
             {
-                // find the observer for the notifyContext
-                for (var i = 0; i < observers.Count; i++)
+                lock (_observerLock)
                 {
-                    if (observers[i].CompareNotifyContext(notifyContext))
+                    // find the observer for the notifyContext
+                    for (var i = 0; i < observers.Count; i++)
                     {
-                        // there can only be one Observer for a given notifyContext 
-					    // in any given Observer list, so remove it and break
-                        observers.RemoveAt(i);
-                        break;
+                        if (observers[i].CompareNotifyContext(notifyContext))
+                        {
+                            // there can only be one Observer for a given notifyContext 
+						    // in any given Observer list, so remove it and break
+                            observers.RemoveAt(i);
+                            break;
+                        }
                     }
                 }
 

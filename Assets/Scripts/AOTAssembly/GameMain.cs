@@ -125,16 +125,21 @@ public class GameMain : MonoBehaviour
 
     void Start()
     {
+        // Init managers first — DialogManager available for error reporting
+        InitManagers();
+
         if (_hotAssembly == null)
         {
             Log.e("HotUpdateAssembly not loaded, cannot start", "GameMain");
+            DialogManager.Instance.ShowInfo("Fatal Error",
+                "Hot update assembly failed to load.\nPlease restart the application.",
+                () => Application.Quit());
             return;
         }
 
         // Resolve LoginSuccessCommand type from HotUpdateAssembly (the only command in hot-update assembly)
         _cmdLoginSuccess = _hotAssembly?.GetType("LoginSuccessCommand");
 
-        InitManagers();
         StartCoroutine(StartupFlow());
     }
 
@@ -290,14 +295,11 @@ public class GameMain : MonoBehaviour
         var hotStartupCmdType = _hotAssembly?.GetType("HotUpdateStartupMacroCommand");
         if (hotStartupCmdType != null)
         {
-            var hotStartupCmd = Activator.CreateInstance(hotStartupCmdType);
-            var executeMethod = hotStartupCmdType.GetMethod("Execute", BindingFlags.Public | BindingFlags.Instance);
-            if (executeMethod != null)
+            var hotStartupCmd = Activator.CreateInstance(hotStartupCmdType) as IHotUpdateStartup;
+            if (hotStartupCmd != null)
             {
-                var notifConstructor = typeof(PureMVC.Patterns.Observer.Notification)
-                    .GetConstructor(new[] { typeof(string), typeof(object), typeof(string) });
-                var notif = notifConstructor?.Invoke(new object[] { "HOT_UPDATE_STARTUP", null, null });
-                executeMethod.Invoke(hotStartupCmd, new[] { notif });
+                var notif = new PureMVC.Patterns.Observer.Notification("HOT_UPDATE_STARTUP", null, null);
+                hotStartupCmd.Execute(notif);
                 Log.d("HotUpdateStartupMacroCommand executed", "GameMain");
             }
         }

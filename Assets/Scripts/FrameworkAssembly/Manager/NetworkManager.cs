@@ -69,9 +69,8 @@ public class NetworkManager : MonoBehaviour
         new ConcurrentQueue<byte[]>();
 
     // Pending frames buffered while disconnected; flushed after reconnect
-    private readonly System.Collections.Generic.Queue<(int msgId, byte[] body)> pendingQueue =
-        new System.Collections.Generic.Queue<(int, byte[])>();
-
+    private readonly ConcurrentQueue<(int msgId, byte[] body)> pendingQueue =
+        new ConcurrentQueue<(int, byte[])>();
     private float heartbeatTimer;
 
     // True when disconnect is intentional (user quit / manual Disconnect call)
@@ -83,6 +82,12 @@ public class NetworkManager : MonoBehaviour
 
     // Interlocked flag to prevent double-fire HandleUnexpectedDisconnect
     private int _isDisconnecting = 0;
+
+    // Prevent duplicate NETWORK_DISCONNECTED notifications while disconnected
+    private volatile bool _disconnectNotified = false;
+
+    // Send queue backpressure: drop frames when queue exceeds this limit
+    private const int SendQueueMaxSize = 1000;
 
     // Sentinel msgId for signalling unexpected disconnect on the main thread
     private const int SENTINEL_DISCONNECT = int.MinValue;
@@ -125,13 +130,13 @@ public class NetworkManager : MonoBehaviour
     /// </summary>
     public void Connect()
     {
-        Connect(serverIP, serverPort);
+        _ = ConnectTaskAsync(serverIP, serverPort);
     }
 
     /// <summary>
     /// Async connect with timeout. Sends NETWORK_CONNECTED on success, NETWORK_ERROR on failure.
     /// </summary>
-    public async void Connect(string host, int port)
+    public async Task ConnectTaskAsync(string host, int port)
     {
         if (_isConnected)
         {
@@ -140,6 +145,7 @@ public class NetworkManager : MonoBehaviour
         }
 
         isIntentionalDisconnect = false;
+        _disconnectNotified = false;
         ResetState();
 
         try
@@ -243,6 +249,7 @@ public class NetworkManager : MonoBehaviour
             return;
         }
 
+        bool shouldNotifyDisconnect = false;
         lock (_connectionLock)
         {
             if (!_isConnected)
@@ -255,11 +262,21 @@ public class NetworkManager : MonoBehaviour
                 // Passive disconnect: buffer and trigger reconnect flow
                 Log.w($"Not connected. Buffering msgId={msgId} for after reconnect.", "NetworkManager");
                 pendingQueue.Enqueue((msgId, body));
-                Facade.Instance.SendNotification(NetworkNotificationConst.NETWORK_DISCONNECTED);
+                if (!_disconnectNotified)
+                {
+                    _disconnectNotified = true;
+                    shouldNotifyDisconnect = true;
+                }
                 return;
             }
 
             EnqueueFrame(msgId, body, bodyLen);
+        }
+
+        // Notify outside lock to prevent re-entrant deadlock
+        if (shouldNotifyDisconnect)
+        {
+            Facade.Instance.SendNotification(NetworkNotificationConst.NETWORK_DISCONNECTED);
         }
     }
 
@@ -273,11 +290,10 @@ public class NetworkManager : MonoBehaviour
         if (count == 0) return;
 
         Log.d($"Flushing {count} pending message(s) after reconnect.", "NetworkManager");
-        while (pendingQueue.Count > 0)
+        while (pendingQueue.TryDequeue(out var pending))
         {
-            var (msgId, body) = pendingQueue.Dequeue();
-            int bodyLen = body != null ? body.Length : 0;
-            EnqueueFrame(msgId, body, bodyLen);
+            int bodyLen = pending.body != null ? pending.body.Length : 0;
+            EnqueueFrame(pending.msgId, pending.body, bodyLen);
         }
     }
 
@@ -286,14 +302,19 @@ public class NetworkManager : MonoBehaviour
     /// </summary>
     public void ClearPendingMessages()
     {
-        int count = pendingQueue.Count;
-        pendingQueue.Clear();
+        int count = 0;
+        while (pendingQueue.TryDequeue(out _)) count++;
         if (count > 0)
             Log.d($"Cleared {count} pending message(s).", "NetworkManager");
     }
 
     private void EnqueueFrame(int msgId, byte[] body, int bodyLen)
     {
+        if (sendQueue.Count >= SendQueueMaxSize)
+        {
+            Log.e($"Send queue full ({SendQueueMaxSize} frames). Dropping msgId={msgId}.", "NetworkManager");
+            return;
+        }
         byte[] frame = new byte[8 + bodyLen];
         WriteBigEndianInt32(frame, 0, msgId);
         WriteBigEndianInt32(frame, 4, bodyLen);
