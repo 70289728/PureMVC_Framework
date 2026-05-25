@@ -311,6 +311,14 @@ public class GameMain : MonoBehaviour
 
     void ConnectServer()
     {
+        // Use game server IP from HotUpdateConfig — allows per-build config without code change.
+        // Falls back to inspector value if HotUpdateManager is not initialized.
+        var hotCfg = HotUpdateManager.Instance?.Config;
+        if (hotCfg != null)
+        {
+            NetworkManager.Instance.serverIP = hotCfg.gameServerIP;
+            NetworkManager.Instance.serverPort = hotCfg.gameServerPort;
+        }
         NetworkManager.Instance.Connect();
     }
 

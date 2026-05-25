@@ -14,6 +14,13 @@ public class HotUpdateConfig : ScriptableObject
     [Tooltip("Path to the version manifest relative to server base URL")]
     public string manifestPath = "manifest.json";
 
+    [Header("Game Server")]
+    [Tooltip("IP address of the TCP game server (e.g. 192.168.1.x for LAN, or public IP)")]
+    public string gameServerIP = "127.0.0.1";
+
+    [Tooltip("Port of the TCP game server")]
+    public int gameServerPort = 5060;
+
     [Header("Download")]
     [Tooltip("Maximum number of download retry attempts per file")]
     public int maxRetryCount = 3;
