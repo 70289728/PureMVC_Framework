@@ -31,9 +31,15 @@ public static class AchievementChecker
             if (_configs != null) return;
             try
             {
-                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-                string projectRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", ".."));
-                string configPath = Path.Combine(projectRoot, "DesignConfig", "Json", "Achievement.json");
+                string configPath = Path.Combine(ClientHandler.DesignConfigRoot ?? 
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "DesignConfig"), 
+                    "Json", "Achievement.json");
+                // Fallback for project-layout auto-detection (4 levels up → workspace root)
+                if (!File.Exists(configPath))
+                {
+                    string workspaceRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", ".."));
+                    configPath = Path.Combine(workspaceRoot, "DesignConfig", "Json", "Achievement.json");
+                }
                 string json = File.ReadAllText(configPath);
                 var wrapper = JsonConvert.DeserializeObject<AchievementConfigWrapper>(json);
                 _configs = wrapper?.items ?? new List<AchievementServerConfig>();

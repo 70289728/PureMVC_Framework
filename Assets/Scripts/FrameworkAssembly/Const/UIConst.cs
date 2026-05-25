@@ -24,6 +24,7 @@ public class UIConst
     #endregion
 
     #region UI Name Constants (Base layer — FrameworkAssembly)
+    public const string UITips = "UITips";
     public const string UIReStart = "UIReStart";
     public const string UILogin = "UILogin";
     public const string UIHotUpdate = "UIHotUpdate";
@@ -60,6 +61,9 @@ public class UIConst
         // Framework (Base) UIs
         RegisterUI(UILogin, "UILogin/UILoginPanel.prefab", UI_PREFAB_ROOT_BASE);
         RegisterUI(UIReStart, "UIReStart/UIReStartPanel.prefab", UI_PREFAB_ROOT_BASE);
+
+        RegisterUI(UITips, "UITips/UITipsPanel.prefab", UI_PREFAB_ROOT_BASE);
+
 
         RegisterUI(UIHotUpdate, "UIHotUpdate/UIHotUpdatePanel.prefab", UI_PREFAB_ROOT_BASE);
 

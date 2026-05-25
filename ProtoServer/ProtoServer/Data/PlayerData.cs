@@ -6,6 +6,12 @@ using System.Collections.Generic;
 /// </summary>
 public class PlayerData
 {
+    /// <summary>
+    /// Schema version for migration support.
+    /// Bump when adding/removing fields; add migration logic in JsonDataStore.GetPlayerDataAsync.
+    /// </summary>
+    public int Version { get; set; } = 1;
+
     #region Base Fields (network_module.proto)
 
     public string PlayerName { get; set; } = "";

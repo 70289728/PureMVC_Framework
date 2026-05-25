@@ -143,16 +143,7 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
     /// </summary>
     protected bool TryLuaHook(string hookName, params object[] args)
     {
-#if UNITY_EDITOR
-        return false;
-#else
-        var lua = LuaBootstrap.Instance;
-        if (lua == null || !lua.IsInitialized) return false;
-
-        string path = $"LuaScripts/MediatorHook/{GetType().Name}.lua";
-        object result = lua.Call(path, hookName, args);
-        return result is bool b && b;
-#endif
+        return LuaHookHelper.TryLuaHook("MediatorHook", GetType().Name, hookName, args);
     }
 
     public virtual void OnShow()
@@ -215,10 +206,9 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
         UnRegisterUIEvents();
         // UnregisterFromUpdateManager is handled by OnRemove (called by RemoveMediator after Close)
 
-        // TODO: Recycle or destroy the view object
         if (isReuseView)
         {
-            // TODO: Put into object pool
+            ObjectPoolManager.Instance.Recycle(viewRootGo.name, viewRootGo);
         }
         else
         {

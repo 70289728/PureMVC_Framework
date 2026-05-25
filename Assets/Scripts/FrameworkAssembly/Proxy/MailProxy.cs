@@ -47,6 +47,9 @@ public class MailProxy : ProxyBase
         foreach (var m in MailList) if (m.Status == 0) UnreadCount++;
         Log.d($"Mail list: {MailList.Count} mails, {UnreadCount} unread", NAME);
         SendNotification(NotificationConst.MAIL_LIST_UPDATED);
+
+        // Update red dot
+        RedDotManager.Instance.SetLeafCount("mail/new", UnreadCount);
     }
 
     private void OnMailReadS2C(byte[] body)

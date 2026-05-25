@@ -19,7 +19,7 @@ public static class NetworkMessageHelper
         var msg = new LoginMessageC2S
         {
             AccountId = accountId,
-            Password  = password
+            Password  = AesHelper.EncryptString(password)
         };
         Net.Send(MessageConst.LOGIN_C2S, msg);
     }
@@ -36,7 +36,7 @@ public static class NetworkMessageHelper
         var msg = new RegisterC2S
         {
             AccountId = accountId,
-            Password  = password
+            Password  = AesHelper.EncryptString(password)
         };
         Net.Send(MessageConst.REGISTER_C2S, msg);
     }

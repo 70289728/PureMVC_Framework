@@ -32,15 +32,6 @@ public abstract class ProxyBase : Proxy
     /// </summary>
     protected bool TryLuaHook(string hookName, params object[] args)
     {
-#if UNITY_EDITOR
-        return false;
-#else
-        var lua = LuaBootstrap.Instance;
-        if (lua == null || !lua.IsInitialized) return false;
-
-        string path = $"LuaScripts/ProxyHook/{GetType().Name}.lua";
-        object result = lua.Call(path, hookName, args);
-        return result is bool b && b;
-#endif
+        return LuaHookHelper.TryLuaHook("ProxyHook", GetType().Name, hookName, args);
     }
 }

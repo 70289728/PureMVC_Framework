@@ -3,21 +3,20 @@ using System.IO;
 using System.Security.Cryptography;
 
 /// <summary>
-/// AES-128-CBC encryption/decryption for Lua bytecode protection.
-/// Uses a 16-byte key and a 16-byte IV (both embedded — not for production security,
-/// but sufficient for basic obfuscation).
+/// AES-128-CBC encryption/decryption for password transport protection.
+/// Must match the client-side AesHelper key/IV exactly.
 /// </summary>
 public static class AesHelper
 {
-    // 16 bytes = AES-128
+    // 16 bytes = AES-128 — must match client-side AesHelper
     private static readonly byte[] Key = {
         0x4C, 0x75, 0x61, 0x48, 0x6F, 0x74, 0x55, 0x70,
-        0x64, 0x61, 0x74, 0x65, 0x4B, 0x65, 0x79, 0x21  // "LuaHotUpdateKey!"
+        0x64, 0x61, 0x74, 0x65, 0x4B, 0x65, 0x79, 0x21
     };
 
     private static readonly byte[] IV = {
         0x4C, 0x75, 0x61, 0x53, 0x63, 0x72, 0x69, 0x70,
-        0x74, 0x73, 0x49, 0x56, 0x31, 0x32, 0x33, 0x34  // "LuaScriptsIV1234"
+        0x74, 0x73, 0x49, 0x56, 0x31, 0x32, 0x33, 0x34
     };
 
     public static byte[] Encrypt(byte[] plainBytes)
@@ -70,7 +69,7 @@ public static class AesHelper
         if (string.IsNullOrEmpty(plainText)) return null;
         var bytes = System.Text.Encoding.UTF8.GetBytes(plainText);
         var encrypted = Encrypt(bytes);
-        return System.Convert.ToBase64String(encrypted);
+        return Convert.ToBase64String(encrypted);
     }
 
     /// <summary>
@@ -79,7 +78,7 @@ public static class AesHelper
     public static string DecryptString(string cipherText)
     {
         if (string.IsNullOrEmpty(cipherText)) return null;
-        var bytes = System.Convert.FromBase64String(cipherText);
+        var bytes = Convert.FromBase64String(cipherText);
         var decrypted = Decrypt(bytes);
         return System.Text.Encoding.UTF8.GetString(decrypted);
     }

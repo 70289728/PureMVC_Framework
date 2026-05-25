@@ -1,23 +1,37 @@
 using System;
+using System.IO;
 using UnityEngine;
 
 /// <summary>
-/// Manages persistent data storage using PlayerPrefs + JsonUtility.
-/// For small data sets. Replace with file-based or binary serialization for large data.
+/// Manages persistent data storage using JSON files.
+/// Files stored in Application.persistentDataPath/Saves/.
 /// </summary>
 public static class SaveManager
 {
+    private static string SaveDir
+    {
+        get
+        {
+            string dir = Path.Combine(Application.persistentDataPath, "Saves");
+            if (!Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+            return dir;
+        }
+    }
+
+    private static string GetPath(string key) => Path.Combine(SaveDir, $"{key}.json");
+
     #region Save / Load
     /// <summary>
-    /// Save a serializable object as JSON
+    /// Save a serializable object as JSON file
     /// </summary>
     public static void Save<T>(string key, T data)
     {
         try
         {
+            string path = GetPath(key);
             string json = JsonUtility.ToJson(data);
-            PlayerPrefs.SetString(key, json);
-            PlayerPrefs.Save();
+            File.WriteAllText(path, json);
             Log.d($"Saved key: {key}", "SaveManager");
         }
         catch (Exception e)
@@ -33,12 +47,13 @@ public static class SaveManager
     {
         try
         {
-            if (!PlayerPrefs.HasKey(key))
+            string path = GetPath(key);
+            if (!File.Exists(path))
             {
                 Log.d($"No save data found for key: {key}, returning default", "SaveManager");
                 return new T();
             }
-            string json = PlayerPrefs.GetString(key);
+            string json = File.ReadAllText(path);
             T data = JsonUtility.FromJson<T>(json);
             Log.d($"Loaded key: {key}", "SaveManager");
             return data;
@@ -57,8 +72,9 @@ public static class SaveManager
     {
         try
         {
-            if (!PlayerPrefs.HasKey(key)) return;
-            string json = PlayerPrefs.GetString(key);
+            string path = GetPath(key);
+            if (!File.Exists(path)) return;
+            string json = File.ReadAllText(path);
             JsonUtility.FromJsonOverwrite(json, target);
             Log.d($"LoadInto key: {key}", "SaveManager");
         }
@@ -75,7 +91,7 @@ public static class SaveManager
     /// </summary>
     public static bool HasKey(string key)
     {
-        return PlayerPrefs.HasKey(key);
+        return File.Exists(GetPath(key));
     }
 
     /// <summary>
@@ -83,9 +99,10 @@ public static class SaveManager
     /// </summary>
     public static void Delete(string key)
     {
-        if (PlayerPrefs.HasKey(key))
+        string path = GetPath(key);
+        if (File.Exists(path))
         {
-            PlayerPrefs.DeleteKey(key);
+            File.Delete(path);
             Log.d($"Deleted key: {key}", "SaveManager");
         }
     }
@@ -95,8 +112,19 @@ public static class SaveManager
     /// </summary>
     public static void DeleteAll()
     {
-        PlayerPrefs.DeleteAll();
-        Log.w("All save data deleted", "SaveManager");
+        try
+        {
+            string dir = Path.Combine(Application.persistentDataPath, "Saves");
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, true);
+                Log.w("All save data deleted", "SaveManager");
+            }
+        }
+        catch (Exception e)
+        {
+            Log.e($"DeleteAll failed: {e.Message}", "SaveManager");
+        }
     }
     #endregion
 

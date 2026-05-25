@@ -3,10 +3,23 @@ using System.Collections.Generic;
 /// <summary>
 /// Message ID constants for TCP protocol.
 /// Range conventions:
-///   1000-1999  System / Connection
-///   2000-2999  Account / Login
-///   3000-3999  Heartbeat
-/// 
+///   1000-1999   System / Connection
+///   2000-2999   Account / Login
+///   3000-3999   Heartbeat
+///   4000-4999   (free — was Chat, removed)
+///   5000-5999   Register
+///   6000-6999   Create Player
+///   7000-7999   Player Ext
+///   8000-19999  (free)
+///   20000-20999 Friend
+///   21000-21999 Mail
+///   22000-22999 Announce
+///   23000-23999 Sign-in
+///   24000-24999 Bag
+///   25000-25999 Shop
+///   26000-26999 Achievement
+///
+/// Convention: Even = S2C, Odd = C2S. New feature: pick next free 1000-block.
 /// Changed from const to static int so hot-update IDs can be merged.
 /// </summary>
 public static class MessageConst

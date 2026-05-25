@@ -1,0 +1,19 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "tabName": "普通",
+      "tabStyle": 1
+    },
+    {
+      "id": 2,
+      "tabName": "限购",
+      "tabStyle": 2
+    },
+    {
+      "id": 3,
+      "tabName": "打折",
+      "tabStyle": 3
+    }
+  ]
+}

@@ -127,12 +127,12 @@ public class TCPServer : IDisposable, IAsyncDisposable
     public Task SendToClientAsync(string clientId, EMessageType messageType, IMessage message)
         => ClientManager.SendToClientAsync(clientId, messageType, message);
 
-    public async Task StopAsync()
+    public Task StopAsync()
     {
         if (_cancellationTokenSource == null)
         {
             Console.WriteLine("[TCPServer] Server not running");
-            return;
+            return Task.CompletedTask;
         }
 
         try
@@ -160,6 +160,7 @@ public class TCPServer : IDisposable, IAsyncDisposable
         {
             Console.WriteLine($"[TCPServer] Stop error: {ex.Message}");
         }
+        return Task.CompletedTask;
     }
 
     public async ValueTask DisposeAsync()

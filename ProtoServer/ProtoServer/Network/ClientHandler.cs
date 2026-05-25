@@ -1,4 +1,4 @@
-﻿using Config;
+using Config;
 using Google.Protobuf;
 using Newtonsoft.Json;
 using System;
@@ -16,19 +16,19 @@ public class ClientHandler : IDisposable
     private readonly CancellationToken _cancellationToken;
     private NetworkStream _stream;
 
-    // 修复4：使用 volatile 保证多线程可见性，避免竞态条件
+    // Fix4: use volatile to ensure multi-thread visibility，avoid race condition
     private volatile bool _isDisposed = false;
 
-    // 修复3：使用 SemaphoreSlim 保证写流的串行化，防止并发写导致数据包错乱
+    // Fix3: use SemaphoreSlim to ensure send stream serialization，prevent concurrent write packet corruption
     private readonly SemaphoreSlim _sendLock = new SemaphoreSlim(1, 1);
 
-    // 修复7：心跳超时检测，记录最后一次收到心跳的时间
+    // Fix7: heartbeat timeout detection，record last heartbeat time
     private DateTime _lastHeartbeatTime = DateTime.UtcNow;
     private static readonly TimeSpan HeartbeatTimeout = TimeSpan.FromSeconds(60);
 
     public string ClientId { get; } = Guid.NewGuid().ToString();
     public long AccountId { get; set; } = 0;
-    public string RemoteEndPoint => _client.Client.RemoteEndPoint?.ToString() ?? "未知";
+    public string RemoteEndPoint => _client.Client.RemoteEndPoint?.ToString() ?? "unknown";
     public bool IsConnected => !_isDisposed && _client.Connected && _stream?.CanRead == true && _stream?.CanWrite == true;
 
     public ClientHandler(TcpClient client, TCPServer server, CancellationToken cancellationToken)
@@ -37,14 +37,14 @@ public class ClientHandler : IDisposable
         _server = server;
         _cancellationToken = cancellationToken;
         _stream = client.GetStream();
-        Console.WriteLine($"[ClientHandler] 初始化Unity客户端引用: {ClientId} | {RemoteEndPoint}");
+        Console.WriteLine($"[ClientHandler] client initialized: {ClientId} | {RemoteEndPoint}");
     }
 
     public async Task StartListeningAsync()
     {
         if (_isDisposed)
         {
-            Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 已释放，无法启动监听");
+            Console.WriteLine($"[ClientHandler] client {ClientId} disposed，cannot start listen");
             return;
         }
 
@@ -54,19 +54,19 @@ public class ClientHandler : IDisposable
         };
         await SendMessageAsync(EMessageType.CONNECT_S2C, connectAck);
 
-        // 修复7：启动心跳超时检测后台任务
+        // Fix7: start heartbeat timeout detection background task
         _ = HeartbeatTimeoutCheckAsync(_cancellationToken);
 
         while (!_cancellationToken.IsCancellationRequested && IsConnected)
         {
             try
             {
-                // 步骤1：读取4字节消息类型（大端）
+                // step1：read4bytesmessage type（big-endian）
                 var typeBuffer = new byte[4];
                 int typeRead = await ReadExactlyAsync(_stream, typeBuffer, 0, 4, _cancellationToken);
                 if (typeRead < 4)
                 {
-                    Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 连接断开（消息类型读取失败）");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} disconnected（message typeread failed）");
                     Disconnect();
                     break;
                 }
@@ -74,65 +74,65 @@ public class ClientHandler : IDisposable
                 int typeInt = BitConverter.ToInt32(typeBuffer, 0);
                 if (!Enum.IsDefined(typeof(EMessageType), typeInt))
                 {
-                    Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 非法消息类型: {typeInt}");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} invalidmessage type: {typeInt}");
                     Disconnect();
                     break;
                 }
                 EMessageType messageType = (EMessageType)typeInt;
 
-                // 步骤2：读取4字节消息体长度（大端）
+                // step2：read4bytesmessage bodylength（big-endian）
                 var lengthBuffer = new byte[4];
                 int lengthRead = await ReadExactlyAsync(_stream, lengthBuffer, 0, 4, _cancellationToken);
                 if (lengthRead < 4)
                 {
-                    Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 连接断开（消息长度读取失败）");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} disconnected（messagelengthread failed）");
                     Disconnect();
                     break;
                 }
                 if (BitConverter.IsLittleEndian) Array.Reverse(lengthBuffer);
                 int msgLength = BitConverter.ToInt32(lengthBuffer, 0);
 
-                // 防攻击：限制消息体最大1MB，最小1字节
+                // Anti-abuse: limit message body max 1MB, min 1 byte
                 if (msgLength <= 0 || msgLength > 1024 * 1024)
                 {
-                    Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 非法消息长度: {msgLength}（超出1MB限制）");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} invalidmessagelength: {msgLength}（exceeds 1MB limit）");
                     Disconnect();
                     break;
                 }
 
-                // 步骤3：读取完整的消息体
+                // step3: read complete message body
                 var msgBuffer = new byte[msgLength];
                 int bodyRead = await ReadExactlyAsync(_stream, msgBuffer, 0, msgLength, _cancellationToken);
                 if (bodyRead < msgLength)
                 {
-                    Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 连接断开（消息体读取不完整）");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} disconnected（message bodyread incomplete）");
                     Disconnect();
                     break;
                 }
 
-                // 步骤4：解析并处理消息
+                // step4: parse and process message
                 await ProcessMessageAsync(messageType, msgBuffer);
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine($"[ClientHandler] Unity客户端 {ClientId} 监听被取消");
+                Console.WriteLine($"[ClientHandler] Unityclient {ClientId} listen cancelled");
                 break;
             }
             catch (ObjectDisposedException)
             {
-                Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 流已释放，停止监听");
+                Console.WriteLine($"[ClientHandler] client {ClientId} stream disposed，stop listening");
                 break;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ClientHandler] Unity客户端 {ClientId} 消息读取异常: {ex.Message}");
+                Console.WriteLine($"[ClientHandler] Unityclient {ClientId} message read error: {ex.Message}");
                 Disconnect();
                 break;
             }
         }
     }
 
-    // 修复7：心跳超时检测，定时检查是否超过 HeartbeatTimeout 没有收到心跳
+    // Fix7: heartbeat timeout detection，periodic checkwhetherexceeds HeartbeatTimeout no heartbeat received
     private async Task HeartbeatTimeoutCheckAsync(CancellationToken cancellationToken)
     {
         try
@@ -142,7 +142,7 @@ public class ClientHandler : IDisposable
                 await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
                 if (DateTime.UtcNow - _lastHeartbeatTime > HeartbeatTimeout)
                 {
-                    Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 心跳超时（>{HeartbeatTimeout.TotalSeconds}s），强制断开");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} heartbeat timeout（>{HeartbeatTimeout.TotalSeconds}s），force-disconnect");
                     Disconnect();
                     break;
                 }
@@ -150,7 +150,7 @@ public class ClientHandler : IDisposable
         }
         catch (OperationCanceledException)
         {
-            // 正常取消，忽略
+            // normal cancel, ignored
         }
     }
 
@@ -159,7 +159,7 @@ public class ClientHandler : IDisposable
         if (stream == null) throw new ArgumentNullException(nameof(stream));
         if (buffer == null) throw new ArgumentNullException(nameof(buffer));
         if (offset < 0 || count < 0 || offset + count > buffer.Length)
-            throw new ArgumentOutOfRangeException("偏移量或长度超出缓冲区范围");
+            throw new ArgumentOutOfRangeException("offset or length out of buffer range");
         if (count == 0) return 0;
 
         int totalRead = 0;
@@ -173,61 +173,61 @@ public class ClientHandler : IDisposable
     }
 
     /// <summary>
-    /// 向客户端发送消息（按新格式打包）
+    /// send message to client（packed in new format）
     /// </summary>
-    /// <param name="messageType">消息类型</param>
-    /// <param name="message">protobuf消息体</param>
+    /// <param name="messageType">message type</param>
+    /// <param name="message">protobufmessage body</param>
     public async Task SendMessageAsync(EMessageType messageType, IMessage message = null)
     {
         if (_isDisposed)
         {
-            Console.WriteLine($"发送失败：客户端 {ClientId} 已释放");
+            Console.WriteLine($"send failed: client {ClientId} disposed");
             return;
         }
         if (!IsConnected)
         {
-            Console.WriteLine($"发送失败：客户端 {ClientId} 已断开连接");
+            Console.WriteLine($"send failed: client {ClientId} disconnected");
             return;
         }
         if (message == null)
         {
-            Console.WriteLine($"发送失败：客户端 {ClientId} 消息体为空");
+            Console.WriteLine($"send failed: client {ClientId} message bodyis empty");
             return;
         }
 
-        // 修复3：加锁，保证同一时刻只有一个协程写流，防止并发写乱序
+        // Fix3: lock, ensure single coroutine writes to stream，prevent concurrent write disorder
         await _sendLock.WaitAsync(_cancellationToken);
         try
         {
-            // 1. Protobuf消息体转字节
+            // 1. Protobufmessage bodytobytes
             byte[] bodyBytes = message.ToByteArray();
             if (bodyBytes.Length > 1024 * 1024)
             {
-                Console.WriteLine($"发送失败：客户端 {ClientId} 消息体超出1MB限制");
+                Console.WriteLine($"send failed: client {ClientId} message bodyexceeds 1MB limit");
                 return;
             }
 
-            // 2. 消息类型转4字节（大端）
+            // 2. message typeto4bytes（big-endian）
             byte[] typeBytes = BitConverter.GetBytes((int)messageType);
             if (BitConverter.IsLittleEndian) Array.Reverse(typeBytes);
 
-            // 3. 消息长度转4字节（大端）
+            // 3. messagelengthto4bytes（big-endian）
             byte[] lenBytes = BitConverter.GetBytes(bodyBytes.Length);
             if (BitConverter.IsLittleEndian) Array.Reverse(lenBytes);
 
-            // 4. 拼接数据包：类型(4) + 长度(4) + 消息体
+            // 4. assemble packet：type(4) + length(4) + message body
             byte[] sendData = new byte[4 + 4 + bodyBytes.Length];
             Buffer.BlockCopy(typeBytes, 0, sendData, 0, 4);
             Buffer.BlockCopy(lenBytes, 0, sendData, 4, 4);
             Buffer.BlockCopy(bodyBytes, 0, sendData, 8, bodyBytes.Length);
 
-            // 5. 异步发送
+            // 5. async send
             await _stream.WriteAsync(sendData, 0, sendData.Length, _cancellationToken);
             await _stream.FlushAsync(_cancellationToken);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"发送消息到 {ClientId} 出错: {ex.Message}");
+            Console.WriteLine($"send message to {ClientId} error: {ex.Message}");
         }
         finally
         {
@@ -236,15 +236,15 @@ public class ClientHandler : IDisposable
     }
 
     /// <summary>
-    /// 处理消息（按类型解析）
+    /// Process message by type
     /// </summary>
-    /// <param name="messageType">消息类型</param>
-    /// <param name="messageBody">消息体字节</param>
+    /// <param name="messageType">message type</param>
+    /// <param name="messageBody">message body bytes</param>
     public async Task ProcessMessageAsync(EMessageType messageType, byte[] messageBody)
     {
         if (messageBody == null || messageBody.Length == 0)
         {
-            Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 消息体为空，跳过处理");
+            Console.WriteLine($"[ClientHandler] client {ClientId} message bodyis empty，skipprocess");
             return;
         }
 
@@ -253,14 +253,16 @@ public class ClientHandler : IDisposable
             switch (messageType)
             {
                 case EMessageType.CONNECT_S2C:
-                    Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 连接确认");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} connection confirmed");
                     break;
                 case EMessageType.CHAT_S2C:
+                    // Client should not send S2C messages; reject silently
+                    Console.WriteLine($"[ClientHandler] Unexpected CHAT_S2C from client {ClientId}, ignored");
                     break;
                 case EMessageType.HEARTBEAT_C2S:
                     var heartbeatMsg = HeartbeatC2S.Parser.ParseFrom(messageBody);
                     _lastHeartbeatTime = DateTime.UtcNow;
-                    // Console.WriteLine($"[ClientHandler] 客户端 {heartbeatMsg.AccountId} {ClientId} 收到心跳");
+                    // Console.WriteLine($"[ClientHandler] client {heartbeatMsg.AccountId} {ClientId} received heartbeat");
                     var heartbeatAck = new HeartbeatS2C
                     {
                         AccountId = heartbeatMsg.AccountId,
@@ -274,7 +276,8 @@ public class ClientHandler : IDisposable
                 case EMessageType.LOGIN_C2S:
                     var loginMsg = LoginMessageC2S.Parser.ParseFrom(messageBody);
                     Console.WriteLine($"[ClientHandler] Client {ClientId} login request, account: {loginMsg.AccountId}");
-                    var loginValid = await _server.DataStore.ValidateLoginAsync(loginMsg.AccountId, loginMsg.Password);
+                    var decryptedLoginPassword = AesHelper.DecryptString(loginMsg.Password) ?? loginMsg.Password;
+                    var loginValid = await _server.DataStore.ValidateLoginAsync(loginMsg.AccountId, decryptedLoginPassword);
                     PlayerInfo playerData = null;
                     if (loginValid)
                     {
@@ -333,7 +336,8 @@ public class ClientHandler : IDisposable
                 case EMessageType.REGISTER_C2S:
                     var registerMsg = RegisterC2S.Parser.ParseFrom(messageBody);
                     Console.WriteLine($"[ClientHandler] Client {ClientId} register request, account: {registerMsg.AccountId}");
-                    var registerResult = await _server.DataStore.CreateAccountAsync(registerMsg.AccountId, registerMsg.Password);
+                    var decryptedRegPassword = AesHelper.DecryptString(registerMsg.Password) ?? registerMsg.Password;
+                    var registerResult = await _server.DataStore.CreateAccountAsync(registerMsg.AccountId, decryptedRegPassword);
                     var registerAck = new RegisterS2C
                     {
                         AccountId = registerMsg.AccountId,
@@ -692,21 +696,21 @@ public class ClientHandler : IDisposable
                     break;
 
                 case EMessageType.ACHIEVEMENT_CLAIM_C2S:
-                    var claimMsg = AchievementClaimC2S.Parser.ParseFrom(messageBody);
-                    var claimData = await _server.DataStore.GetPlayerDataAsync(AccountId);
-                    var claimAck = ProcessAchievementClaim(claimData, claimMsg.Id);
-                    await _server.DataStore.SavePlayerDataAsync(AccountId, claimData);
-                    await SendMessageAsync(EMessageType.ACHIEVEMENT_CLAIM_S2C, claimAck);
+                    var achClaimMsg = AchievementClaimC2S.Parser.ParseFrom(messageBody);
+                    var achClaimData = await _server.DataStore.GetPlayerDataAsync(AccountId);
+                    var achClaimAck = ProcessAchievementClaim(achClaimData, achClaimMsg.Id);
+                    await _server.DataStore.SavePlayerDataAsync(AccountId, achClaimData);
+                    await SendMessageAsync(EMessageType.ACHIEVEMENT_CLAIM_S2C, achClaimAck);
                     break;
 
                 default:
-                    Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 未知消息类型：{messageType}");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} unknownmessage type：{messageType}");
                     break;
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 消息解析异常: {ex.Message}");
+            Console.WriteLine($"[ClientHandler] client {ClientId} messageparseerror: {ex.Message}");
         }
 
         await Task.CompletedTask;
@@ -889,6 +893,12 @@ public class ClientHandler : IDisposable
         }
 
         int day = pd.SignDay;
+        if (day < 1 || day > SignInConfig.Rewards.Count)
+        {
+            Console.WriteLine($"[ClientHandler] SignIn: invalid SignDay={day}, resetting to 1");
+            day = 1;
+            pd.SignDay = 1;
+        }
         var reward = SignInConfig.Rewards[day - 1];
         int type = reward.type, itemId = reward.itemId, count = reward.count;
 
@@ -1021,15 +1031,44 @@ public class ClientHandler : IDisposable
         };
     }
 
+    /// <summary>
+    /// Root directory for DesignConfig JSON files.
+    /// Set via TCPServer.DesignConfigRoot before starting the server.
+    /// Falls back to auto-detection (relative to executable).
+    /// </summary>
+    public static string DesignConfigRoot { get; set; }
+
+    /// <summary>
+    /// Resolve the DesignConfig root directory.
+    /// Priority: explicitly set > auto-detect from project layout > base dir
+    /// </summary>
+    private static string ResolveDesignConfigRoot()
+    {
+        if (!string.IsNullOrEmpty(DesignConfigRoot) && Directory.Exists(DesignConfigRoot))
+            return DesignConfigRoot;
+
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        // Auto-detect: try 4 levels up from bin/Debug|Release → workspace root (PureMVC_Framework/)
+        string workspaceRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", ".."));
+        string designPath = Path.Combine(workspaceRoot, "DesignConfig");
+        if (Directory.Exists(designPath))
+            return designPath;
+
+        // Fallback: try DesignConfig in baseDir (production deployment layout)
+        string baseDesignPath = Path.Combine(baseDir, "DesignConfig");
+        if (Directory.Exists(baseDesignPath))
+            return baseDesignPath;
+
+        return designPath; // Return best guess, let caller handle missing files
+    }
+
     private static List<ShopItem> _cachedShopConfig;
     private static List<ShopItem> LoadShopConfig()
     {
         if (_cachedShopConfig != null) return _cachedShopConfig;
         try
         {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string projectRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", ".."));
-            string configPath = Path.Combine(projectRoot, "DesignConfig", "Json", "ShopItem.json");
+            string configPath = Path.Combine(ResolveDesignConfigRoot(), "Json", "ShopItem.json");
             string json = File.ReadAllText(configPath);
             var wrapper = JsonConvert.DeserializeObject<ShopConfigWrapper>(json);
             _cachedShopConfig = wrapper?.items ?? new List<ShopItem>();
@@ -1148,15 +1187,15 @@ public class ClientHandler : IDisposable
                 _client.Client.Shutdown(SocketShutdown.Both);
             }
             _client.Dispose();
-            Console.WriteLine($"[ClientHandler] 客户端 {ClientId} 已主动断开连接");
+            Console.WriteLine($"[ClientHandler] client {ClientId} disconnected actively");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ClientHandler] 断开Unity客户端 {ClientId} 异常: {ex.Message}");
+            Console.WriteLine($"[ClientHandler] disconnect Unity client {ClientId} error: {ex.Message}");
         }
     }
 
-    // 用于 Interlocked 原子操作的 int 标志（0=未释放，1=已释放）
+    // Interlocked atomic int flag: 0=not freed, 1=disposed
     private int _isDisposedInt = 0;
 
     public void Dispose()

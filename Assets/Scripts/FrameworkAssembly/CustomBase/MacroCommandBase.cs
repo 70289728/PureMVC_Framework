@@ -39,15 +39,6 @@ public abstract class MacroCommandBase : MacroCommand
     /// </summary>
     protected bool TryLuaHook(string hookName, params object[] args)
     {
-#if UNITY_EDITOR
-        return false;
-#else
-        var lua = LuaBootstrap.Instance;
-        if (lua == null || !lua.IsInitialized) return false;
-
-        string path = $"LuaScripts/CommandHook/{GetType().Name}.lua";
-        object result = lua.Call(path, hookName, args);
-        return result is bool b && b;
-#endif
+        return LuaHookHelper.TryLuaHook("CommandHook", GetType().Name, hookName, args);
     }
 }

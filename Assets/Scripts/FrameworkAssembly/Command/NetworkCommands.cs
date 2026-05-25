@@ -14,19 +14,16 @@ public class NetworkDisconnectedCommand : CommandBase
         proxy.IsReconnecting = true;
 
         string message = proxy.ReconnectAttempts > 0
-            ? $"Connection lost (attempt {proxy.ReconnectAttempts}/{NetworkProxy.MAX_RECONNECT_ATTEMPTS}).\nRetry?"
-            : "Connection lost.\nReconnect?";
+            ? $"Connection lost (attempt {proxy.ReconnectAttempts}/{NetworkProxy.MAX_RECONNECT_ATTEMPTS}). Try again?"
+            : "Server connection lost. Reconnect?";
 
-#if UNITY_EDITOR
-        bool confirm = UnityEditor.EditorUtility.DisplayDialog("Network Disconnected", message, "Reconnect", "Cancel");
-        HandleChoice(proxy, confirm);
-#else
-        Facade.SendNotification(NetworkNotificationConst.NETWORK_DISCONNECTED_DIALOG,
-            new ReconnectDialogData(
-                message,
-                onConfirm: () => HandleChoice(proxy, true),
-                onCancel:  () => HandleChoice(proxy, false)));
-#endif
+        DialogManager.Instance.ShowConfirm(
+            "Network Disconnected",
+            message,
+            onConfirm: () => HandleChoice(proxy, true),
+            onCancel:  () => HandleChoice(proxy, false),
+            confirmText: "Reconnect",
+            cancelText: "Cancel");
     }
 
     private void HandleChoice(NetworkProxy proxy, bool confirm)

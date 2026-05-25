@@ -49,7 +49,10 @@ public class NetworkManager : MonoBehaviour
 
     #region Public API
     public MessageDispatcher Dispatcher { get; private set; }
-    public bool IsConnected { get; private set; }
+
+    // Backing field with volatile for cross-thread visibility
+    private volatile bool _isConnected;
+    public bool IsConnected => _isConnected;
     #endregion
 
     #region Private Fields
@@ -73,10 +76,24 @@ public class NetworkManager : MonoBehaviour
 
     // True when disconnect is intentional (user quit / manual Disconnect call)
     // Passive disconnects (server drop / network error) leave this false
-    private bool isIntentionalDisconnect = false;
+    private volatile bool isIntentionalDisconnect = false;
+
+    // Lock to guard IsConnected + CleanupSocket transitions and Send() TOCTOU
+    private readonly object _connectionLock = new object();
+
+    // Interlocked flag to prevent double-fire HandleUnexpectedDisconnect
+    private int _isDisconnecting = 0;
 
     // Sentinel msgId for signalling unexpected disconnect on the main thread
     private const int SENTINEL_DISCONNECT = int.MinValue;
+
+    // Current logged-in account ID for heartbeat (set after login success)
+    private static long _currentAccountId = 0;
+    public static long CurrentAccountId
+    {
+        get => Interlocked.Read(ref _currentAccountId);
+        set => Interlocked.Exchange(ref _currentAccountId, value);
+    }
     #endregion
 
     #region Unity Lifecycle
@@ -105,43 +122,10 @@ public class NetworkManager : MonoBehaviour
     #region Connect / Disconnect
     /// <summary>
     /// Connect using the inspector-configured serverIP and serverPort.
-    /// If serverIP is "127.0.0.1" or "localhost", tries to resolve from HotUpdateConfig first.
     /// </summary>
     public void Connect()
     {
-        string host = serverIP;
-        // Auto-resolve from hot update server URL for non-localhost scenarios
-        if (host == "127.0.0.1" || host == "localhost" || host == "0.0.0.0")
-        {
-            var hotUpdateConfig = Resources.Load<HotUpdateConfig>("HotUpdateConfig");
-            if (hotUpdateConfig != null && !string.IsNullOrEmpty(hotUpdateConfig.serverBaseUrl))
-            {
-                string extracted = ExtractHostFromUrl(hotUpdateConfig.serverBaseUrl);
-                if (!string.IsNullOrEmpty(extracted) && extracted != "localhost" && extracted != "127.0.0.1" && extracted != "0.0.0.0")
-                {
-                    host = extracted;
-                    Log.d($"Resolved server IP from HotUpdateConfig: {host}", "NetworkManager");
-                }
-            }
-        }
-        Connect(host, serverPort);
-    }
-
-    /// <summary>
-    /// Extract host from URL like "http://10.219.60.142:8080" → "10.219.60.142".
-    /// </summary>
-    private static string ExtractHostFromUrl(string url)
-    {
-        if (string.IsNullOrEmpty(url)) return null;
-        // Remove protocol
-        int protocolEnd = url.IndexOf("://", StringComparison.Ordinal);
-        string hostPart = protocolEnd >= 0 ? url.Substring(protocolEnd + 3) : url;
-        // Remove port and path
-        int portStart = hostPart.IndexOf(':', StringComparison.Ordinal);
-        if (portStart >= 0) hostPart = hostPart.Substring(0, portStart);
-        int pathStart = hostPart.IndexOf('/', StringComparison.Ordinal);
-        if (pathStart >= 0) hostPart = hostPart.Substring(0, pathStart);
-        return hostPart;
+        Connect(serverIP, serverPort);
     }
 
     /// <summary>
@@ -149,7 +133,7 @@ public class NetworkManager : MonoBehaviour
     /// </summary>
     public async void Connect(string host, int port)
     {
-        if (IsConnected)
+        if (_isConnected)
         {
             Log.w("Already connected. Call Disconnect() first.", "NetworkManager");
             return;
@@ -180,7 +164,7 @@ public class NetworkManager : MonoBehaviour
             await connectTask; // re-throw if faulted
 
             networkStream = tcpClient.GetStream();
-            IsConnected   = true;
+            _isConnected   = true;
             heartbeatTimer = 0f;
             packetHandler.Clear();
 
@@ -212,7 +196,7 @@ public class NetworkManager : MonoBehaviour
     // Called by OnDestroy / OnApplicationQuit — silent cleanup, no notifications.
     private void DisconnectInternal()
     {
-        if (!IsConnected && tcpClient == null)
+        if (!_isConnected && tcpClient == null)
             return;
 
         isIntentionalDisconnect = true;
@@ -224,7 +208,7 @@ public class NetworkManager : MonoBehaviour
 
     private void ResetState()
     {
-        IsConnected    = false;
+        _isConnected    = false;
         heartbeatTimer = 0f;
         packetHandler.Clear();
         networkStream  = null;
@@ -233,11 +217,14 @@ public class NetworkManager : MonoBehaviour
 
     private void CleanupSocket()
     {
-        IsConnected = false;
-        try { networkStream?.Close(); }  catch { }
-        try { tcpClient?.Close(); }      catch { }
-        networkStream = null;
-        tcpClient     = null;
+        lock (_connectionLock)
+        {
+            _isConnected = false;
+            try { networkStream?.Close(); }  catch { }
+            try { tcpClient?.Close(); }      catch { }
+            networkStream = null;
+            tcpClient     = null;
+        }
         packetHandler.Clear();
     }
     #endregion
@@ -256,21 +243,24 @@ public class NetworkManager : MonoBehaviour
             return;
         }
 
-        if (!IsConnected)
+        lock (_connectionLock)
         {
-            if (isIntentionalDisconnect)
+            if (!_isConnected)
             {
-                Log.w($"Send ignored: intentional disconnect in progress (msgId={msgId}).", "NetworkManager");
+                if (isIntentionalDisconnect)
+                {
+                    Log.w($"Send ignored: intentional disconnect in progress (msgId={msgId}).", "NetworkManager");
+                    return;
+                }
+                // Passive disconnect: buffer and trigger reconnect flow
+                Log.w($"Not connected. Buffering msgId={msgId} for after reconnect.", "NetworkManager");
+                pendingQueue.Enqueue((msgId, body));
+                Facade.Instance.SendNotification(NetworkNotificationConst.NETWORK_DISCONNECTED);
                 return;
             }
-            // Passive disconnect: buffer and trigger reconnect flow
-            Log.w($"Not connected. Buffering msgId={msgId} for after reconnect.", "NetworkManager");
-            pendingQueue.Enqueue((msgId, body));
-            Facade.Instance.SendNotification(NetworkNotificationConst.NETWORK_DISCONNECTED);
-            return;
-        }
 
-        EnqueueFrame(msgId, body, bodyLen);
+            EnqueueFrame(msgId, body, bodyLen);
+        }
     }
 
     /// <summary>
@@ -327,7 +317,7 @@ public class NetworkManager : MonoBehaviour
         byte[] buf = new byte[4096];
         try
         {
-            while (!token.IsCancellationRequested && IsConnected)
+            while (!token.IsCancellationRequested && _isConnected)
             {
                 int bytesRead = await networkStream.ReadAsync(buf, 0, buf.Length, token);
                 if (bytesRead == 0)
@@ -370,7 +360,7 @@ public class NetworkManager : MonoBehaviour
     {
         try
         {
-            while (!token.IsCancellationRequested && IsConnected)
+            while (!token.IsCancellationRequested && _isConnected)
             {
                 if (sendQueue.TryDequeue(out byte[] frame))
                 {
@@ -396,6 +386,10 @@ public class NetworkManager : MonoBehaviour
 
     private void HandleUnexpectedDisconnect()
     {
+        // Prevent double-fire from concurrent error paths
+        if (Interlocked.Exchange(ref _isDisconnecting, 1) == 1)
+            return;
+
         cts?.Cancel();
         CleanupSocket();
         receiveQueue.Enqueue((SENTINEL_DISCONNECT, null));
@@ -430,7 +424,7 @@ public class NetworkManager : MonoBehaviour
         if (heartbeatTimer >= heartbeatInterval)
         {
             heartbeatTimer = 0f;
-            var heartbeat = new HeartbeatC2S { AccountId = 99999 };
+            var heartbeat = new HeartbeatC2S { AccountId = CurrentAccountId };
             Send(MessageConst.HEARTBEAT_C2S, heartbeat);
             Log.d("Heartbeat sent.", "NetworkManager");
         }

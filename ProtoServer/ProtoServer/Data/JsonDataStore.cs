@@ -25,6 +25,10 @@ public class JsonDataStore : IDataStore
     private readonly ConcurrentDictionary<long, string> _accounts
         = new ConcurrentDictionary<long, string>();
 
+    // Name → accountId index for fast player search
+    private readonly ConcurrentDictionary<string, long> _nameIndex
+        = new ConcurrentDictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
     private readonly object _accountsFileLock = new object();
 
     public JsonDataStore(string baseDir = null)
@@ -71,9 +75,8 @@ public class JsonDataStore : IDataStore
             return Task.FromResult(false);
         }
 
-        var inputHash = HashPassword(password);
-        var match = storedHash == inputHash;
-        Console.WriteLine($"[JsonDataStore] ValidateLogin: account {accountId}, hash match = {match}");
+        var match = VerifyAndUpgradePassword(password, accountId, ref storedHash);
+        Console.WriteLine($"[JsonDataStore] ValidateLogin: account {accountId}, password match = {match}");
         return Task.FromResult(match);
     }
 
@@ -111,6 +114,7 @@ public class JsonDataStore : IDataStore
 
         var json = JsonConvert.SerializeObject(data, Formatting.Indented);
         File.WriteAllText(filePath, json, Encoding.UTF8);
+        _nameIndex.TryAdd(playerName, accountId);
         Console.WriteLine($"[JsonDataStore] Player created: {playerName} for account {accountId}");
         return Task.FromResult(true);
     }
@@ -154,18 +158,14 @@ public class JsonDataStore : IDataStore
     {
         if (string.IsNullOrWhiteSpace(playerName)) return null;
 
-        var files = Directory.GetFiles(_playersDir, "*.json");
-        foreach (var file in files)
-        {
-            var accountIdStr = Path.GetFileNameWithoutExtension(file);
-            if (!long.TryParse(accountIdStr, out var accId)) continue;
+        // O(1) index lookup instead of O(n) directory scan
+        if (!_nameIndex.TryGetValue(playerName.Trim(), out var accId))
+            return null;
 
-            var data = await GetPlayerDataAsync(accId);
-            if (data != null && data.PlayerName.Equals(playerName, StringComparison.OrdinalIgnoreCase))
-            {
-                return (accId, data);
-            }
-        }
+        var data = await GetPlayerDataAsync(accId);
+        if (data != null && data.PlayerName.Equals(playerName, StringComparison.OrdinalIgnoreCase))
+            return (accId, data);
+
         return null;
     }
 
@@ -203,13 +203,116 @@ public class JsonDataStore : IDataStore
         }
     }
 
+    // PBKDF2 parameters
+    private const int Pbkdf2Iterations = 100000;
+    private const int Pbkdf2SaltSize = 16; // 128-bit salt
+    private const int Pbkdf2HashSize = 32; // 256-bit output
+
+    /// <summary>
+    /// Hash password using PBKDF2-SHA256 with random salt.
+    /// Format: base64(salt + hash)
+    /// </summary>
     private static string HashPassword(string password)
     {
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            byte[] salt = new byte[Pbkdf2SaltSize];
+            rng.GetBytes(salt);
+
+            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, Pbkdf2Iterations, HashAlgorithmName.SHA256))
+            {
+                byte[] hash = pbkdf2.GetBytes(Pbkdf2HashSize);
+                byte[] combined = new byte[Pbkdf2SaltSize + Pbkdf2HashSize];
+                Buffer.BlockCopy(salt, 0, combined, 0, Pbkdf2SaltSize);
+                Buffer.BlockCopy(hash, 0, combined, Pbkdf2SaltSize, Pbkdf2HashSize);
+                return Convert.ToBase64String(combined);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Verify a password against a PBKDF2 hash (or legacy SHA256 hash, auto-upgrades).
+    /// </summary>
+    private bool VerifyAndUpgradePassword(string password, long accountId, ref string storedHash)
+    {
+        // Try PBKDF2 verification first
+        if (VerifyPassword(password, storedHash))
+            return true;
+
+        // Fallback: legacy SHA256 (pre-2026-05-25), auto-upgrade on success
+        if (TryLegacySha256Verify(password, storedHash))
+        {
+            var newHash = HashPassword(password);
+            _accounts[accountId] = newHash;
+            SaveAccounts();
+            Console.WriteLine($"[JsonDataStore] Account {accountId}: password hash auto-upgraded to PBKDF2");
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Legacy SHA256 verification for migration support.
+    /// Returns true if the stored hash is a 64-char hex string matching SHA256(password).
+    /// </summary>
+    private static bool TryLegacySha256Verify(string password, string storedHash)
+    {
+        if (string.IsNullOrEmpty(storedHash) || storedHash.Length != 64)
+            return false;
+
+        // Check if storedHash is a hex string (all hex characters)
+        foreach (char c in storedHash)
+            if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+                return false;
+
         using (var sha256 = SHA256.Create())
         {
             var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-            return BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
+            var hex = BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
+            return storedHash.Equals(hex, StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    /// <summary>
+    /// Verify password against PBKDF2 hash.
+    /// </summary>
+    private static bool VerifyPassword(string password, string storedHash)
+    {
+        try
+        {
+            byte[] combined = Convert.FromBase64String(storedHash);
+            if (combined.Length != Pbkdf2SaltSize + Pbkdf2HashSize)
+                return false;
+
+            byte[] salt = new byte[Pbkdf2SaltSize];
+            byte[] expectedHash = new byte[Pbkdf2HashSize];
+            Buffer.BlockCopy(combined, 0, salt, 0, Pbkdf2SaltSize);
+            Buffer.BlockCopy(combined, Pbkdf2SaltSize, expectedHash, 0, Pbkdf2HashSize);
+
+            using (var pbkdf2 = new Rfc2898DeriveBytes(password, salt, Pbkdf2Iterations, HashAlgorithmName.SHA256))
+            {
+                byte[] actualHash = pbkdf2.GetBytes(Pbkdf2HashSize);
+                return ConstantTimeEquals(actualHash, expectedHash);
+            }
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Constant-time byte array comparison to prevent timing attacks.
+    /// </summary>
+    private static bool ConstantTimeEquals(byte[] a, byte[] b)
+    {
+        if (a == null || b == null || a.Length != b.Length)
+            return false;
+        int result = 0;
+        for (int i = 0; i < a.Length; i++)
+            result |= a[i] ^ b[i];
+        return result == 0;
     }
 
     #endregion

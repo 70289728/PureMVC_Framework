@@ -1,0 +1,19 @@
+{
+  "nodes": [
+    { "key": "bag",         "parent": "root", "displayType": 0 },
+    { "key": "bag/newItem", "parent": "bag",  "displayType": 1 },
+    { "key": "bag/full",    "parent": "bag",  "displayType": 0 },
+
+    { "key": "shop",          "parent": "root",  "displayType": 0 },
+    { "key": "shop/dailyFree", "parent": "shop", "displayType": 0 },
+
+    { "key": "mail",     "parent": "root", "displayType": 1 },
+    { "key": "mail/new", "parent": "mail", "displayType": 1 },
+
+    { "key": "task",          "parent": "root", "displayType": 1 },
+    { "key": "task/claimable", "parent": "task", "displayType": 1 },
+
+    { "key": "signin",       "parent": "root",  "displayType": 0 },
+    { "key": "signin/today", "parent": "signin","displayType": 0 }
+  ]
+}

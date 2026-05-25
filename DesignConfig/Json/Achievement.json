@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "id": 1001,
+      "name": "First Day",
+      "desc": "Login for the first day",
+      "category": 1,
+      "type": 1,
+      "triggerEvent": "PlayerLogin",
+      "targetNum": 1,
+      "rewardType": 1,
+      "rewardNum": 100
+    },
+    {
+      "id": 1002,
+      "name": "Rich Man",
+      "desc": "Accumulate 1000 gold",
+      "category": 2,
+      "type": 2,
+      "triggerEvent": "GoldChange",
+      "targetNum": 1000,
+      "rewardType": 2,
+      "rewardNum": 50
+    },
+    {
+      "id": 1003,
+      "name": "Spender",
+      "desc": "Accumulate 5000 gold spent on diamond",
+      "category": 2,
+      "type": 1,
+      "triggerEvent": "DiamondChange",
+      "targetNum": 5000,
+      "rewardType": 2,
+      "rewardNum": 100
+    },
+    {
+      "id": 1004,
+      "name": "Shopper",
+      "desc": "Buy 1 item from shop",
+      "category": 4,
+      "type": 1,
+      "triggerEvent": "ShopBuy",
+      "targetNum": 1,
+      "rewardType": 1,
+      "rewardNum": 200
+    },
+    {
+      "id": 1005,
+      "name": "Sign-in Beginner",
+      "desc": "Sign in on day 1",
+      "category": 1,
+      "type": 1,
+      "triggerEvent": "SignIn",
+      "targetNum": 1,
+      "rewardType": 1,
+      "rewardNum": 50
+    },
+    {
+      "id": 1006,
+      "name": "Friendship",
+      "desc": "Add 1 friend",
+      "category": 3,
+      "type": 1,
+      "triggerEvent": "FriendAdd",
+      "targetNum": 1,
+      "rewardType": 2,
+      "rewardNum": 30
+    },
+    {
+      "id": 1007,
+      "name": "Collector",
+      "desc": "Get 1 item",
+      "category": 4,
+      "type": 1,
+      "triggerEvent": "ItemGet",
+      "targetNum": 1,
+      "rewardType": 1,
+      "rewardNum": 100
+    }
+  ]
+}

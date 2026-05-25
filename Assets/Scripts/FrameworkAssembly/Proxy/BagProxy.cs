@@ -78,6 +78,10 @@ public class BagProxy : ProxyBase
         MaxSlots = resp.MaxSlots;
         Log.d($"Bag list: {Items.Count} items", NAME);
         SendNotification(NotificationConst.BAG_LIST_UPDATED);
+
+        // Update red dots
+        RedDotManager.Instance.SetLeafCount("bag/newItem", Items.Count);
+        RedDotManager.Instance.SetLeafCount("bag/full", MaxSlots - Items.Count <= 5 ? 1 : 0);
     }
 
     private void OnBagUseS2C(byte[] body)

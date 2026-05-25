@@ -65,6 +65,7 @@ public class UserProxy : ProxyBase
         var resp = NetworkMessageHelper.ParseLoginS2C(body);
         if (resp.Rst.Result)
         {
+            NetworkManager.CurrentAccountId = resp.AccountId;
             // Sync player data from server
             if (resp.PlayerData != null && !string.IsNullOrEmpty(resp.PlayerData.PlayerName))
             {

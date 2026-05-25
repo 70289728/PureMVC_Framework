@@ -102,6 +102,11 @@ public class ShopProxy : ProxyBase
         }
         Log.d($"Shop list received: {_buyRecords.Count} records", NAME);
         SendNotification(NotificationConst.UPDATE_SHOP);
+
+        // Update red dot: any item with discount not yet bought → show dot
+        int freeAvailable = _shopConfig.Exists(cfg =>
+            cfg.discount > 0 && (!_buyRecords.TryGetValue(cfg.id, out int bought) || bought < (cfg.limitBuyNum > 0 ? cfg.limitBuyNum : 1))) ? 1 : 0;
+        RedDotManager.Instance.SetLeafCount("shop/dailyFree", freeAvailable);
     }
 
     private void OnShopBuyS2C(byte[] body)
