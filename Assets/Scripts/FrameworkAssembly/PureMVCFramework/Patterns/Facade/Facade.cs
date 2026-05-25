@@ -74,11 +74,19 @@ namespace PureMVC.Patterns.Facade
         /// </summary>
         /// <param name="facadeFunc">the <c>FuncDelegate</c> of the <c>IFacade</c></param>
         /// <returns>the Singleton instance of the Facade</returns>
+        private static readonly object _instanceLock = new object();
+
         public static IFacade GetInstance(Func<IFacade> facadeFunc)
         {
             if (instance == null)
             {
-                instance = facadeFunc();
+                lock (_instanceLock)
+                {
+                    if (instance == null)
+                    {
+                        instance = facadeFunc();
+                    }
+                }
             }
             return instance;
         }
@@ -319,8 +327,8 @@ namespace PureMVC.Patterns.Facade
         /// <summary>References to View</summary>
         protected IView view;
 
-        /// <summary>Singleton instance</summary>
-        protected static IFacade instance;
+        /// <summary>Singleton instance (volatile for double-check locking safety)</summary>
+        protected static volatile IFacade instance;
 
         /// <summary>Message Constants</summary>
         protected const string SingletonMsg = "Facade Singleton already constructed!";

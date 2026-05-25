@@ -100,16 +100,12 @@ namespace PureMVC.Core
 
         public virtual void RegisterObserver(string notificationName, IObserver observer)
         {
-            if (observerMap.TryGetValue(notificationName, out var observers))
+            // GetOrAdd ensures atomicity: if key exists, use existing; if not, create new list under lock.
+            // This prevents the race where two threads both see key missing and one's observer is lost.
+            lock (_observerLock)
             {
-                lock (_observerLock)
-                {
-                    observers.Add(observer);
-                }
-            }
-            else
-            {
-                observerMap.TryAdd(notificationName, new List<IObserver> { observer });
+                var observers = observerMap.GetOrAdd(notificationName, _ => new List<IObserver>());
+                observers.Add(observer);
             }
         }
 
@@ -276,8 +272,8 @@ namespace PureMVC.Core
         /// <summary>Mapping of Notification names to Observer lists</summary>
         protected readonly ConcurrentDictionary<string, IList<IObserver>> observerMap;
 
-        /// <summary>Singleton instance</summary>
-        protected static IView instance;
+        /// <summary>Singleton instance (volatile for double-check locking safety)</summary>
+        protected static volatile IView instance;
 
         /// <summary>Message Constants</summary>
         protected const string SingletonMsg = "View Singleton already constructed!";

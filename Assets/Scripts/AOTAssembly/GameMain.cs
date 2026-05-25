@@ -212,10 +212,9 @@ public class GameMain : MonoBehaviour
     {
         Log.d("Starting hot update check...", "GameMain");
 
-        // Init, GameStart sends STARTUP → HotUpdateCommand → check → UI or success
+        // Init, GameStart sends STARTUP → StartupMacroCommand → HotUpdateCommand
         InitModule();
         GameStart();  // This sends STARTUP → StartupMacroCommand → HotUpdateCommand
-        ConnectServer();
 
         // Editor: skip wait (AssetDatabase provides assets directly)
 #if !UNITY_EDITOR
@@ -238,6 +237,9 @@ public class GameMain : MonoBehaviour
         // Reload red dot tree if hot update delivered a new RedDotTree.json
         RedDotManager.Instance.ReloadTree();
 #endif
+
+        // Connect to server AFTER hot update completes — avoids idle TCP while downloading
+        ConnectServer();
 
         // Open login only if no restart is needed
         if (!HotUpdateManager.Instance.NeedRestart)

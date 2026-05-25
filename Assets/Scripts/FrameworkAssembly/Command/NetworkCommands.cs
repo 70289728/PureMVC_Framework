@@ -63,8 +63,7 @@ public class NetworkConnectedCommand : CommandBase
         var proxy = GetProxy<NetworkProxy>(NetworkProxy.NAME);
         if (!proxy.IsReconnecting) return;
 
-        proxy.IsReconnecting    = false;
-        proxy.ReconnectAttempts = 0;
+        proxy.ResetReconnectState();
         Log.d("Reconnected successfully. Flushing pending messages.", "NetworkConnectedCommand");
         NetworkManager.Instance.FlushPendingMessages();
 

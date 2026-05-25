@@ -164,7 +164,8 @@ public class RedDotManager : MonoBehaviour
         // For removed nodes: zero out entire subtree, remove from map
         foreach (string oldKey in oldKeys)
         {
-            if (!nodeMap.ContainsKey(oldKey) || !IsInNewConfig(oldKey, newConfig))
+            if (oldKey == "root") continue;
+            if (!IsInNewConfig(oldKey, newConfig))
             {
                 if (nodeMap.TryGetValue(oldKey, out RedDotNode removed))
                 {
@@ -307,6 +308,7 @@ public class RedDotManager : MonoBehaviour
     /// <summary>
     /// Register a node in the tree. If the node already exists, no-op.
     /// Use "." as path separator (e.g. "bag/newItem").
+    /// Detects and rejects cyclic parent-child relationships to prevent infinite loops.
     /// </summary>
     public RedDotNode RegisterNode(string key, string parentKey, RedDotDisplayType displayType)
     {
@@ -332,6 +334,13 @@ public class RedDotManager : MonoBehaviour
             parent = root;
         }
 
+        // Cycle detection: if this node's key appears anywhere in parent's ancestry, reject
+        if (parent != null && IsAncestor(parent, normalizedKey))
+        {
+            Log.e($"Cycle detected: cannot register '{normalizedKey}' under '{parent.Key}' — would create a loop", "RedDotManager");
+            return null;
+        }
+
         var node = new RedDotNode(normalizedKey, displayType);
         nodeMap[normalizedKey] = node;
 
@@ -340,6 +349,21 @@ public class RedDotManager : MonoBehaviour
 
         Log.d($"Registered red dot node: {normalizedKey} (parent={parent?.Key ?? "null"})", "RedDotManager");
         return node;
+    }
+
+    /// <summary>
+    /// Check if targetKey is already an ancestor of the given node (would create a cycle).
+    /// </summary>
+    private bool IsAncestor(RedDotNode node, string targetKey)
+    {
+        var current = node;
+        while (current != null)
+        {
+            if (current.Key == targetKey)
+                return true;
+            current = current.Parent;
+        }
+        return false;
     }
 
     #endregion

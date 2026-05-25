@@ -202,7 +202,7 @@ public class TCPServer : IDisposable, IAsyncDisposable
         };
         _announces.Add(a);
         Console.WriteLine($"[TCPServer] Announce added: [{a.Id}] {title}");
-        BroadcastAnnounceAsync(a, false);
+        _ = BroadcastAnnounceAsync(a, false);
     }
 
     public void RemoveAnnounce(long id)
@@ -211,10 +211,10 @@ public class TCPServer : IDisposable, IAsyncDisposable
         if (a == null) return;
         _announces.Remove(a);
         Console.WriteLine($"[TCPServer] Announce removed: [{id}] {a.Title}");
-        BroadcastAnnounceAsync(a, true);
+        _ = BroadcastAnnounceAsync(a, true);
     }
 
-    private async void BroadcastAnnounceAsync(AnnounceInfo a, bool isDelete)
+    private async Task BroadcastAnnounceAsync(AnnounceInfo a, bool isDelete)
     {
         var notify = new AnnounceNotifyS2C { Announce = a, IsDelete = isDelete };
         foreach (var client in ClientManager.GetAllClients())

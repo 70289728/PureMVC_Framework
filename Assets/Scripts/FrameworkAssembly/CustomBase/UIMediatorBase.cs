@@ -140,9 +140,13 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
     /// Lua file path: LuaScripts/MediatorHook/{mediatorTypeName}.lua
     /// Lua function name matches hookName.
     /// Returns true if Lua handled it.
+    /// Returns false if LuaBootstrap is not initialized (e.g. during construction).
     /// </summary>
     protected bool TryLuaHook(string hookName, params object[] args)
     {
+        // Guard: LuaBootstrap may not be initialized during construction
+        if (LuaBootstrap.Instance == null || !LuaBootstrap.Instance.IsInitialized)
+            return false;
         return LuaHookHelper.TryLuaHook("MediatorHook", GetType().Name, hookName, args);
     }
 
@@ -204,7 +208,7 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
         if (!TryLuaHook("OnClose"))
             OnClose();
         UnRegisterUIEvents();
-        // UnregisterFromUpdateManager is handled by OnRemove (called by RemoveMediator after Close)
+        UnregisterFromUpdateManager();
 
         if (isReuseView)
         {

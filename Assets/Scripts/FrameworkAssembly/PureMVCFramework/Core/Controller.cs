@@ -94,11 +94,19 @@ namespace PureMVC.Core
         /// </summary>
         /// <param name="factory">the <c>FuncDelegate</c> of the <c>IController</c></param>
         /// <returns>the Singleton instance of <c>Controller</c></returns>
+        private static readonly object _instanceLock = new object();
+
         public static IController GetInstance(Func<IController> factory)
         {
             if (instance == null)
             {
-                instance = factory();
+                lock (_instanceLock)
+                {
+                    if (instance == null)
+                    {
+                        instance = factory();
+                    }
+                }
             }
             return instance;
         }
@@ -171,8 +179,8 @@ namespace PureMVC.Core
         /// <summary>Mapping of Notification names to Command Class references</summary>
         protected readonly ConcurrentDictionary<string, Func<ICommand>> commandMap;
 
-        /// <summary>Singleton instance</summary>
-        protected static IController instance;
+        /// <summary>Singleton instance (volatile for double-check locking safety)</summary>
+        protected static volatile IController instance;
 
         /// <summary>Message Constants</summary>
         protected const string SingletonMsg = "Controller Singleton already constructed!";

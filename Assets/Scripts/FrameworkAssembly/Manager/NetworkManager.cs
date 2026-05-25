@@ -118,6 +118,13 @@ public class NetworkManager : MonoBehaviour
     {
         HandleHeartbeat();
         DrainReceiveQueue();
+        TickReconnectTimeout();
+    }
+
+    private void TickReconnectTimeout()
+    {
+        var proxy = Facade.Instance.RetrieveProxy(NetworkProxy.NAME) as NetworkProxy;
+        proxy?.TickReconnectTimeout();
     }
 
     private void OnDestroy()         => DisconnectInternal();
@@ -385,8 +392,12 @@ public class NetworkManager : MonoBehaviour
             {
                 if (sendQueue.TryDequeue(out byte[] frame))
                 {
-                    await networkStream.WriteAsync(frame, 0, frame.Length, token);
-                    await networkStream.FlushAsync(token);
+                    // Capture stream locally to prevent NullReferenceException
+                    // if CleanupSocket() nulls networkStream between _isConnected check and WriteAsync
+                    var stream = networkStream;
+                    if (stream == null) break;
+                    await stream.WriteAsync(frame, 0, frame.Length, token);
+                    await stream.FlushAsync(token);
                 }
                 else
                 {
@@ -397,6 +408,10 @@ public class NetworkManager : MonoBehaviour
         catch (OperationCanceledException)
         {
             // Normal cancellation on Disconnect()
+        }
+        catch (NullReferenceException)
+        {
+            // networkStream was nulled by CleanupSocket — normal shutdown
         }
         catch (Exception e)
         {
@@ -431,6 +446,15 @@ public class NetworkManager : MonoBehaviour
                 }
                 continue;
             }
+
+            // Defense-in-depth: reject oversized messages even if packet handler missed them
+            int bodyLen = packet.body != null ? packet.body.Length : 0;
+            if (bodyLen > maxMessageSize)
+            {
+                Log.e($"Received message too large (id={packet.msgId}, size={bodyLen}). Dropping.", "NetworkManager");
+                continue;
+            }
+
             Dispatcher.Dispatch(packet.msgId, packet.body);
         }
     }

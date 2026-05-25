@@ -136,8 +136,8 @@ namespace PureMVC.Core
         /// <summary>Mapping of proxyNames to IProxy instances</summary>
         protected readonly ConcurrentDictionary<string, IProxy> proxyMap;
 
-        /// <summary>Singleton instance</summary>
-        protected static IModel instance;
+        /// <summary>Singleton instance (volatile for double-check locking safety)</summary>
+        protected static volatile IModel instance;
 
         /// <summary>Message Constants</summary>
         protected const string SingletonMsg = "Model Singleton already constructed!";

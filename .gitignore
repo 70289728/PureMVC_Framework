@@ -13,7 +13,6 @@
 # ============================================================
 *.csproj
 *.csproj.lscache
-*.sln
 *.user
 *.userosscache
 *.suo

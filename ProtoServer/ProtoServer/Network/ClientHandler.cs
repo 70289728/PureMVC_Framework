@@ -1055,10 +1055,16 @@ public class ClientHandler : IDisposable
 
     /// <summary>
     /// Resolve the DesignConfig root directory.
-    /// Priority: explicitly set > auto-detect from project layout > base dir
+    /// Priority: CONFIG_ROOT env var > explicitly set > auto-detect from project layout > base dir
     /// </summary>
     private static string ResolveDesignConfigRoot()
     {
+        // Priority 1: environment variable CONFIG_ROOT
+        string envRoot = Environment.GetEnvironmentVariable("CONFIG_ROOT");
+        if (!string.IsNullOrEmpty(envRoot) && Directory.Exists(envRoot))
+            return envRoot;
+
+        // Priority 2: explicitly set by Startup via TCPServer.DesignConfigRoot
         if (!string.IsNullOrEmpty(DesignConfigRoot) && Directory.Exists(DesignConfigRoot))
             return DesignConfigRoot;
 

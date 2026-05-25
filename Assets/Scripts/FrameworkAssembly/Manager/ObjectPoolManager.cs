@@ -28,6 +28,12 @@ public class ObjectPoolManager : MonoBehaviour
     private Dictionary<string, Queue<GameObject>> pool = new Dictionary<string, Queue<GameObject>>();
     private Dictionary<string, GameObject> prefabRegistry = new Dictionary<string, GameObject>();
     private Transform poolRoot;
+
+    /// <summary>
+    /// Default maximum pool size per key. When exceeded, recycled objects are destroyed instead of enqueued.
+    /// Set to 0 for unlimited (not recommended for production).
+    /// </summary>
+    private const int DefaultMaxPoolSize = 50;
     #endregion
 
     #region Unity Lifecycle
@@ -91,18 +97,25 @@ public class ObjectPoolManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Return a GameObject to the pool
+    /// Return a GameObject to the pool. If pool exceeds max size, destroy the object instead.
     /// </summary>
     public void Recycle(string key, GameObject go)
     {
         if (go == null) return;
 
-        go.SetActive(false);
-        go.transform.SetParent(poolRoot);
-
         if (!pool.ContainsKey(key))
             pool[key] = new Queue<GameObject>();
 
+        // Enforce max pool size to prevent unbounded memory growth
+        if (DefaultMaxPoolSize > 0 && pool[key].Count >= DefaultMaxPoolSize)
+        {
+            Log.w($"Pool '{key}' full ({DefaultMaxPoolSize} items). Destroying excess object.", "ObjectPoolManager");
+            Destroy(go);
+            return;
+        }
+
+        go.SetActive(false);
+        go.transform.SetParent(poolRoot);
         pool[key].Enqueue(go);
     }
 
