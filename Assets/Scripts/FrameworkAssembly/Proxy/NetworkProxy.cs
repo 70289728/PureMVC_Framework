@@ -5,8 +5,9 @@ using UnityEngine;
 /// - Registers CONNECT_S2C callback on startup (independent of any UI).
 /// - Holds reconnect state; logic triggered by NetworkDisconnectedCommand / NetworkConnectedCommand.
 /// - Reset timer: if reconnect hangs (NETWORK_CONNECTED never fires), auto-reset state after timeout.
+///   Tick driven by UpdateManager (registered in OnRegister), no longer polled by NetworkManager.
 /// </summary>
-public class NetworkProxy : ProxyBase
+public class NetworkProxy : ProxyBase, IUpdatable
 {
     public new const string NAME = "NetworkProxy";
 
@@ -24,27 +25,47 @@ public class NetworkProxy : ProxyBase
     {
         NetworkManager.Instance.Dispatcher.Register(MessageConst.CONNECT_S2C, OnConnectS2C);
         NetworkManager.Instance.Dispatcher.Register(MessageConst.HEARTBEAT_S2C, OnHeartbeatS2C);
+        // Register self with UpdateManager for reconnect timeout ticking.
+        // Owns its own tick instead of being polled by NetworkManager.
+        UpdateManager.Instance.Register(this, UpdateType.Update, UpdateFrequency.Low);
     }
 
     public override void OnRemove()
     {
         NetworkManager.Instance.Dispatcher.Unregister(MessageConst.CONNECT_S2C, OnConnectS2C);
         NetworkManager.Instance.Dispatcher.Unregister(MessageConst.HEARTBEAT_S2C, OnHeartbeatS2C);
+        UpdateManager.Instance.Unregister(this, UpdateType.Update);
     }
 
+    #region IUpdatable
     /// <summary>
-    /// Called every frame by CommandBase.TryLuaHook or external tick.
+    /// Only active while reconnecting — UpdateManager will skip this entry otherwise.
+    /// </summary>
+    public bool IsUpdateActive => IsReconnecting;
+
+    public void OnUpdate(float deltaTime)
+    {
+        TickReconnectTimeout(deltaTime);
+    }
+
+    public void OnFixedUpdate(float fixedDeltaTime) { }
+    public void OnLateUpdate(float deltaTime) { }
+    #endregion
+
+    /// <summary>
     /// Auto-resets reconnect state if no NETWORK_CONNECTED received within timeout.
     /// </summary>
-    public void TickReconnectTimeout()
+    private void TickReconnectTimeout(float deltaTime)
     {
         if (!IsReconnecting) return;
+        // Use unscaledDeltaTime so reconnect logic is unaffected by Time.timeScale changes
         _reconnectTimer += Time.unscaledDeltaTime;
         if (_reconnectTimer >= RECONNECT_TIMEOUT)
         {
             Log.w($"Reconnect timed out after {RECONNECT_TIMEOUT}s. Resetting state.", NAME);
             IsReconnecting    = false;
             ReconnectAttempts = 0;
+            _reconnectTimer   = 0f;
             NetworkManager.Instance.ClearPendingMessages();
         }
     }

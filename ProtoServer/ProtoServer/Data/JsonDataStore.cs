@@ -119,6 +119,14 @@ public class JsonDataStore : IDataStore
         return Task.FromResult(true);
     }
 
+    /// <summary>
+    /// Get player data for an account.
+    /// 
+    /// Design note: returns a default (empty) PlayerData when the file doesn't exist.
+    /// This is intentional — the server uses pd.PlayerName to determine whether the
+    /// player has been created yet (empty PlayerName = not created).
+    /// The client then opens character creation UI. Do NOT change this to return null.
+    /// </summary>
     public Task<PlayerData> GetPlayerDataAsync(long accountId)
     {
         var filePath = GetPlayerFilePath(accountId);

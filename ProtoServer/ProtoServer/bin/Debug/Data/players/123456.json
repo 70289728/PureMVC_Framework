@@ -1,11 +1,42 @@
 ﻿{
+  "Version": 1,
   "PlayerName": "dsfsf",
   "Gender": 0,
   "Job": 0,
   "Level": 1,
   "Gold": 0,
+  "Diamond": 0,
   "Exp": 0,
   "Equipment": [],
   "LastLoginTime": "2026-04-29T06:26:20.1931931Z",
-  "CreatedTime": "2026-04-29T06:26:20.1931931Z"
+  "CreatedTime": "2026-04-29T06:26:20.1931931Z",
+  "VipLevel": 0,
+  "Signature": "",
+  "BattlePassExp": 0,
+  "FriendIds": [],
+  "FriendRemarks": {},
+  "BlockedIds": [],
+  "PendingApplies": [],
+  "Mails": [],
+  "SignDay": 1,
+  "ConsecutiveDays": 0,
+  "MaxConsecutiveDays": 0,
+  "TotalSignDays": 0,
+  "CycleStartTime": 0,
+  "LastSignTime": 0,
+  "BagItems": [],
+  "ShopBuyRecords": {},
+  "AchievementProgress": {
+    "1001": 1,
+    "1002": 0,
+    "1003": 0,
+    "1004": 0,
+    "1005": 0,
+    "1006": 0,
+    "1007": 0
+  },
+  "UnlockedAchievements": [
+    1001
+  ],
+  "ClaimedAchievements": []
 }

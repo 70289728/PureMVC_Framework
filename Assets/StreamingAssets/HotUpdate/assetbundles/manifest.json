@@ -1,0 +1,53 @@
+{
+    "version": "1.0.9",
+    "buildTime": "2026-05-26T16:13:35",
+    "platform": "Android",
+    "bundles": [
+        {
+            "name": "base_base_prefab.ab",
+            "md5": "7a943439cc16402339fd1d36b5fcc88f",
+            "sha256": "4e9bd871f57df642665268427a1aeff63dca3980f5afa74f1f1619face821d0b",
+            "crc32": "4E7D52BA",
+            "size": 20007,
+            "layer": 0,
+            "compression": 0,
+            "resourceType": 1,
+            "dependencies": [],
+            "assets": [
+                "Assets/ProjectAssets/Base/UIAssets/Prefabs/UITips/UITipsPanel.prefab",
+                "Assets/ProjectAssets/Base/UIAssets/Prefabs/UIReStart/UIReStartPanel.prefab",
+                "Assets/ProjectAssets/Base/UIAssets/Prefabs/UIHotUpdate/UIHotUpdatePanel.prefab",
+                "Assets/ProjectAssets/Base/UIAssets/Prefabs/UILogin/UILoginPanel.prefab"
+            ]
+        },
+        {
+            "name": "hotfix_hotupdate_prefab.ab",
+            "md5": "29f417b1906e5934b89aae7175a165b8",
+            "sha256": "72e6a19b397c5d3518c1c783f4e74565e9adc126ddf6a7428e25efa989a992e0",
+            "crc32": "139AA6EF",
+            "size": 21132,
+            "layer": 2,
+            "compression": 0,
+            "resourceType": 1,
+            "dependencies": [],
+            "assets": [
+                "Assets/ProjectAssets/HotUpdate/UIAssets/Prefabs/UIMain/UIMainPanel.prefab",
+                "Assets/ProjectAssets/HotUpdate/UIAssets/Prefabs/UICreatePlayer/UICreatePlayerPanel.prefab",
+                "Assets/ProjectAssets/HotUpdate/UIAssets/Prefabs/UIShop/UIShopPanel.prefab",
+                "Assets/ProjectAssets/HotUpdate/UIAssets/Prefabs/UIBag/UIBagPanel.prefab"
+            ]
+        },
+        {
+            "name": "dll/HotUpdateAssembly.dll",
+            "md5": "437b6ac49b1902cd2b2c91d2a36ee8d5",
+            "sha256": "",
+            "crc32": "",
+            "size": 29696,
+            "layer": 0,
+            "compression": 0,
+            "resourceType": 0,
+            "dependencies": [],
+            "assets": []
+        }
+    ]
+}

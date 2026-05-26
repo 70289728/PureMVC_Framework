@@ -98,7 +98,7 @@ public class RedDotManager : MonoBehaviour
 
         // Load new config
         RedDotTreeConfig newConfig = null;
-        string hotUpdatePath = System.IO.Path.Combine(Application.persistentDataPath, "HotUpdate", "RedDotTree.json");
+        string hotUpdatePath = GetHotUpdateRedDotPath();
         if (System.IO.File.Exists(hotUpdatePath))
         {
             try
@@ -217,16 +217,16 @@ public class RedDotManager : MonoBehaviour
     /// Load red dot tree with hot-update priority.
     /// 
     /// Priority chain:
-    ///   1. persistentDataPath/HotUpdate/RedDotTree.json  (hot-update downloaded)
-    ///   2. Resources/RedDotTree.json                       (built-in, can be overridden by AB hot-update)
-    ///   3. Code-default GetDefaultConfig()                  (fallback)
+    ///   1. persistentDataPath/{HotUpdateConfig.localHotUpdateDir}/RedDotTree.json  (hot-update downloaded)
+    ///   2. Resources/RedDotTree.json                                                (built-in fallback)
+    ///   3. Code-default GetDefaultConfig()                                          (fallback)
     /// </summary>
     private void LoadTreeFromConfig()
     {
         RedDotTreeConfig config = null;
 
         // Priority 1: persistentDataPath — hot-update downloaded
-        string hotUpdatePath = System.IO.Path.Combine(Application.persistentDataPath, "HotUpdate", "RedDotTree.json");
+        string hotUpdatePath = GetHotUpdateRedDotPath();
         if (System.IO.File.Exists(hotUpdatePath))
         {
             try
@@ -276,6 +276,23 @@ public class RedDotManager : MonoBehaviour
     /// <summary>
     /// Default red dot tree used when config file is missing.
     /// </summary>
+    /// <summary>
+    /// Resolve the hot-update RedDotTree.json path using HotUpdateManager's configured directory.
+    /// Falls back to "HotUpdate" if HotUpdateManager / Config isn't initialized yet.
+    /// </summary>
+    private static string GetHotUpdateRedDotPath()
+    {
+        string dir = "HotUpdate";
+        try
+        {
+            var cfg = HotUpdateManager.Instance?.Config;
+            if (cfg != null && !string.IsNullOrEmpty(cfg.localHotUpdateDir))
+                dir = cfg.localHotUpdateDir;
+        }
+        catch { /* HotUpdateManager not yet initialized — fall through to default */ }
+        return System.IO.Path.Combine(Application.persistentDataPath, dir, "RedDotTree.json");
+    }
+
     private static RedDotTreeConfig GetDefaultConfig()
     {
         return new RedDotTreeConfig

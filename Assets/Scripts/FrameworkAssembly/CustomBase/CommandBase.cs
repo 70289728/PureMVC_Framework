@@ -19,7 +19,9 @@ public abstract class CommandBase : SimpleCommand
         }
         catch (System.Exception e)
         {
-            Log.e($"Command {GetType().Name} execute error: {e.Message}", "CommandBase");
+            Log.e($"Command [{GetType().Name}] unhandled exception:\n{e}", "CommandBase");
+            Facade.SendNotification(NotificationConst.SYS_ERROR,
+                $"Command [{GetType().Name}] failed: {e.Message}");
         }
     }
 

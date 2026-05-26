@@ -29,6 +29,7 @@ public enum HotUpdateState
 {
     Idle,
     Checking,
+    UpdateAvailable,   // Update is available, waiting for user confirmation (HOT_UPDATE_AVAILABLE fired)
     Downloading,
     Verifying,
     Applying,

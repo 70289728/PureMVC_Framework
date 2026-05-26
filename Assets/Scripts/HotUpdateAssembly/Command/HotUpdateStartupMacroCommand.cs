@@ -8,7 +8,7 @@ using PureMVC.Patterns.Command;
 /// 
 /// Add new hot-update SubCommands here.
 /// </summary>
-public class HotUpdateStartupMacroCommand : MacroCommandBase
+public class HotUpdateStartupMacroCommand : MacroCommandBase, IHotUpdateStartup
 {
     protected override void InitializeMacroCommand()
     {

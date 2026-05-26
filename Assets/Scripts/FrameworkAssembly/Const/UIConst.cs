@@ -49,6 +49,7 @@ public class UIConst
 
     private Dictionary<string, UIViewDef> uIViewDefs;
     private bool isInit = false;
+    private bool isFrozen = false;
 
     public void Init()
     {
@@ -77,14 +78,31 @@ public class UIConst
     /// <summary>
     /// Register a UI definition. HotUpdateAssembly calls this via reflection
     /// to merge its UI definitions at startup.
+    /// Calls after Freeze() are rejected with a warning.
     /// </summary>
     public void RegisterUI(string uiName, string prefabPath, string rootPath)
     {
+        if (isFrozen)
+        {
+            Log.w($"UIConst.RegisterUI rejected after Freeze(): '{uiName}'. Register at startup before Freeze().", "UIConst");
+            return;
+        }
         if (uIViewDefs.ContainsKey(uiName))
         {
             Log.w($"UIConst.RegisterUI: duplicate UI name '{uiName}' — overwriting", "UIConst");
         }
         uIViewDefs[uiName] = new UIViewDef(prefabPath, rootPath);
+    }
+
+    /// <summary>
+    /// Freeze the UI registry. After this, RegisterUI calls are rejected.
+    /// Should be called once Base + HotUpdate UI registration is complete.
+    /// </summary>
+    public void Freeze()
+    {
+        if (isFrozen) return;
+        isFrozen = true;
+        Log.d($"UIConst frozen ({uIViewDefs.Count} UI definitions)", "UIConst");
     }
 
     public UIViewDef GetUIViewDef(string uiName)

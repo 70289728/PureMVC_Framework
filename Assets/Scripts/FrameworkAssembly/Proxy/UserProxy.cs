@@ -161,13 +161,29 @@ public class UserProxy : ProxyBase
 
     public void AddGold(int num)
     {
-        userData.Gold += num;
+        SetGold(userData.Gold + num);
+    }
+
+    /// <summary>
+    /// Set gold to an absolute value. Validates non-negative. Fires UPDATE_USER_INFO.
+    /// </summary>
+    public void SetGold(int value)
+    {
+        userData.Gold = Mathf.Max(0, value);
         SendNotification(NotificationConst.UPDATE_USER_INFO, userData);
     }
 
     public void AddDiamond(int num)
     {
-        userData.Diamond += num;
+        SetDiamond(userData.Diamond + num);
+    }
+
+    /// <summary>
+    /// Set diamond to an absolute value. Validates non-negative. Fires UPDATE_USER_INFO.
+    /// </summary>
+    public void SetDiamond(int value)
+    {
+        userData.Diamond = Mathf.Max(0, value);
         SendNotification(NotificationConst.UPDATE_USER_INFO, userData);
     }
 

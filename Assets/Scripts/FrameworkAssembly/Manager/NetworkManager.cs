@@ -83,11 +83,17 @@ public class NetworkManager : MonoBehaviour
     // Interlocked flag to prevent double-fire HandleUnexpectedDisconnect
     private int _isDisconnecting = 0;
 
+    // Connect concurrency gate (0=idle, 1=connecting). Prevents multiple parallel Connect() calls.
+    private int _isConnecting = 0;
+
     // Prevent duplicate NETWORK_DISCONNECTED notifications while disconnected
     private volatile bool _disconnectNotified = false;
 
     // Send queue backpressure: drop frames when queue exceeds this limit
     private const int SendQueueMaxSize = 1000;
+
+    // Pending queue backpressure (offline buffer): drop oldest when over limit
+    private const int PendingQueueMaxSize = 500;
 
     // Sentinel msgId for signalling unexpected disconnect on the main thread
     private const int SENTINEL_DISCONNECT = int.MinValue;
@@ -118,13 +124,8 @@ public class NetworkManager : MonoBehaviour
     {
         HandleHeartbeat();
         DrainReceiveQueue();
-        TickReconnectTimeout();
-    }
-
-    private void TickReconnectTimeout()
-    {
-        var proxy = Facade.Instance.RetrieveProxy(NetworkProxy.NAME) as NetworkProxy;
-        proxy?.TickReconnectTimeout();
+        // Reconnect-timeout ticking is owned by NetworkProxy itself (IUpdatable + UpdateManager).
+        // No reverse coupling from NetworkManager to NetworkProxy.
     }
 
     private void OnDestroy()         => DisconnectInternal();
@@ -134,65 +135,85 @@ public class NetworkManager : MonoBehaviour
     #region Connect / Disconnect
     /// <summary>
     /// Connect using the inspector-configured serverIP and serverPort.
+    /// Fire-and-forget wrapper with exception logging (prevents silent task swallowing).
     /// </summary>
     public void Connect()
     {
-        _ = ConnectTaskAsync(serverIP, serverPort);
+        SafeFireAndForget(ConnectTaskAsync(serverIP, serverPort), "Connect");
     }
 
     /// <summary>
     /// Async connect with timeout. Sends NETWORK_CONNECTED on success, NETWORK_ERROR on failure.
+    /// Concurrency-safe: rejects parallel calls via _isConnecting gate.
     /// </summary>
     public async Task ConnectTaskAsync(string host, int port)
     {
-        if (_isConnected)
+        // Concurrency gate: only one connect attempt allowed at a time
+        if (Interlocked.CompareExchange(ref _isConnecting, 1, 0) == 1)
         {
-            Log.w("Already connected. Call Disconnect() first.", "NetworkManager");
+            Log.w("Connect already in progress, ignoring duplicate call.", "NetworkManager");
             return;
         }
 
-        isIntentionalDisconnect = false;
-        _disconnectNotified = false;
-        ResetState();
-
         try
         {
-            Log.d($"Connecting to {host}:{port}...", "NetworkManager");
-
-            tcpClient = new TcpClient();
-            cts       = new CancellationTokenSource();
-
-            var connectTask  = tcpClient.ConnectAsync(host, port);
-            var timeoutTask  = Task.Delay(connectTimeoutMs, cts.Token);
-            var completed    = await Task.WhenAny(connectTask, timeoutTask);
-
-            if (completed == timeoutTask)
+            if (_isConnected)
             {
-                Log.e($"Connection timed out after {connectTimeoutMs}ms.", "NetworkManager");
-                CleanupSocket();
-                Facade.Instance.SendNotification(NetworkNotificationConst.NETWORK_ERROR, "Connection timed out.");
+                Log.w("Already connected. Call Disconnect() first.", "NetworkManager");
                 return;
             }
 
-            await connectTask; // re-throw if faulted
+            isIntentionalDisconnect = false;
+            _disconnectNotified = false;
+            ResetState();
 
-            networkStream = tcpClient.GetStream();
-            _isConnected   = true;
-            heartbeatTimer = 0f;
-            packetHandler.Clear();
+            try
+            {
+                Log.d($"Connecting to {host}:{port}...", "NetworkManager");
 
-            Log.d($"Connected to {host}:{port}.", "NetworkManager");
-            Facade.Instance.SendNotification(NetworkNotificationConst.NETWORK_CONNECTED);
+                tcpClient = new TcpClient();
+                cts       = new CancellationTokenSource();
 
-            // Start background loops
-            _ = ReceiveLoopAsync(cts.Token);
-            _ = SendLoopAsync(cts.Token);
+                var connectTask  = tcpClient.ConnectAsync(host, port);
+                var timeoutTask  = Task.Delay(connectTimeoutMs, cts.Token);
+                var completed    = await Task.WhenAny(connectTask, timeoutTask);
+
+                if (completed == timeoutTask)
+                {
+                    Log.e($"Connection timed out after {connectTimeoutMs}ms.", "NetworkManager");
+                    CleanupSocket();
+                    Facade.Instance.SendNotification(NetworkNotificationConst.NETWORK_ERROR, "Connection timed out.");
+                    return;
+                }
+
+                await connectTask; // re-throw if faulted
+
+                lock (_connectionLock)
+                {
+                    networkStream  = tcpClient.GetStream();
+                    _isConnected   = true;
+                    Interlocked.Exchange(ref _isDisconnecting, 0);
+                }
+                // heartbeatTimer was already reset by ResetState() above; no need to set again here
+                packetHandler.Clear();
+
+                Log.d($"Connected to {host}:{port}.", "NetworkManager");
+                Facade.Instance.SendNotification(NetworkNotificationConst.NETWORK_CONNECTED);
+
+                // Start background loops with exception logging
+                SafeFireAndForget(ReceiveLoopAsync(cts.Token), "ReceiveLoop");
+                SafeFireAndForget(SendLoopAsync(cts.Token), "SendLoop");
+            }
+            catch (Exception e)
+            {
+                Log.e($"Connection failed: {e.Message}", "NetworkManager");
+                CleanupSocket();
+                Facade.Instance.SendNotification(NetworkNotificationConst.NETWORK_ERROR, e.Message);
+            }
         }
-        catch (Exception e)
+        finally
         {
-            Log.e($"Connection failed: {e.Message}", "NetworkManager");
-            CleanupSocket();
-            Facade.Instance.SendNotification(NetworkNotificationConst.NETWORK_ERROR, e.Message);
+            Interlocked.Exchange(ref _isConnecting, 0);
         }
     }
 
@@ -221,11 +242,14 @@ public class NetworkManager : MonoBehaviour
 
     private void ResetState()
     {
-        _isConnected    = false;
+        lock (_connectionLock)
+        {
+            _isConnected   = false;
+            networkStream  = null;
+            tcpClient      = null;
+        }
         heartbeatTimer = 0f;
         packetHandler.Clear();
-        networkStream  = null;
-        tcpClient      = null;
     }
 
     private void CleanupSocket()
@@ -266,9 +290,8 @@ public class NetworkManager : MonoBehaviour
                     Log.w($"Send ignored: intentional disconnect in progress (msgId={msgId}).", "NetworkManager");
                     return;
                 }
-                // Passive disconnect: buffer and trigger reconnect flow
-                Log.w($"Not connected. Buffering msgId={msgId} for after reconnect.", "NetworkManager");
-                pendingQueue.Enqueue((msgId, body));
+                // Passive disconnect: buffer (with cap) and trigger reconnect flow
+                EnqueuePending(msgId, body);
                 if (!_disconnectNotified)
                 {
                     _disconnectNotified = true;
@@ -288,8 +311,25 @@ public class NetworkManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Buffer a message while disconnected. Drops the oldest entry when over capacity.
+    /// </summary>
+    private void EnqueuePending(int msgId, byte[] body)
+    {
+        // Drop oldest first if over capacity
+        while (pendingQueue.Count >= PendingQueueMaxSize)
+        {
+            if (!pendingQueue.TryDequeue(out var dropped))
+                break;
+            Log.w($"Pending queue full ({PendingQueueMaxSize}), dropped oldest msgId={dropped.msgId}.", "NetworkManager");
+        }
+        pendingQueue.Enqueue((msgId, body));
+        Log.w($"Not connected. Buffered msgId={msgId} (pending={pendingQueue.Count}).", "NetworkManager");
+    }
+
+    /// <summary>
     /// Flush all buffered pending messages into the send queue.
     /// Called automatically after a successful reconnect.
+    /// Re-checks _isConnected under lock to avoid pushing into a dead send queue.
     /// </summary>
     public void FlushPendingMessages()
     {
@@ -297,11 +337,27 @@ public class NetworkManager : MonoBehaviour
         if (count == 0) return;
 
         Log.d($"Flushing {count} pending message(s) after reconnect.", "NetworkManager");
+
+        int flushed = 0;
+        int dropped = 0;
         while (pendingQueue.TryDequeue(out var pending))
         {
             int bodyLen = pending.body != null ? pending.body.Length : 0;
-            EnqueueFrame(pending.msgId, pending.body, bodyLen);
+            lock (_connectionLock)
+            {
+                if (!_isConnected)
+                {
+                    // Disconnected mid-flush — re-buffer and stop (avoid losing the rest)
+                    pendingQueue.Enqueue(pending);
+                    dropped++;
+                    break;
+                }
+                EnqueueFrame(pending.msgId, pending.body, bodyLen);
+            }
+            flushed++;
         }
+        if (dropped > 0)
+            Log.w($"Flush aborted: connection lost mid-flush ({flushed} flushed, {pendingQueue.Count} re-buffered).", "NetworkManager");
     }
 
     /// <summary>
@@ -347,7 +403,11 @@ public class NetworkManager : MonoBehaviour
         {
             while (!token.IsCancellationRequested && _isConnected)
             {
-                int bytesRead = await networkStream.ReadAsync(buf, 0, buf.Length, token);
+                // Capture stream locally to prevent NRE if CleanupSocket nulls it
+                var stream = networkStream;
+                if (stream == null) break;
+
+                int bytesRead = await stream.ReadAsync(buf, 0, buf.Length, token);
                 if (bytesRead == 0)
                 {
                     // Server closed connection gracefully
@@ -373,6 +433,10 @@ public class NetworkManager : MonoBehaviour
         catch (OperationCanceledException)
         {
             // Normal cancellation on Disconnect()
+        }
+        catch (ObjectDisposedException)
+        {
+            // Stream/socket was disposed by CleanupSocket — normal shutdown
         }
         catch (Exception e)
         {
@@ -409,6 +473,10 @@ public class NetworkManager : MonoBehaviour
         {
             // Normal cancellation on Disconnect()
         }
+        catch (ObjectDisposedException)
+        {
+            // Stream/socket was disposed by CleanupSocket — normal shutdown
+        }
         catch (NullReferenceException)
         {
             // networkStream was nulled by CleanupSocket — normal shutdown
@@ -429,6 +497,20 @@ public class NetworkManager : MonoBehaviour
         cts?.Cancel();
         CleanupSocket();
         receiveQueue.Enqueue((SENTINEL_DISCONNECT, null));
+    }
+
+    /// <summary>
+    /// Wrap a fire-and-forget Task with unhandled-exception logging.
+    /// Prevents silent task swallowing for ConnectTaskAsync / ReceiveLoop / SendLoop.
+    /// </summary>
+    private static void SafeFireAndForget(Task task, string tag)
+    {
+        if (task == null) return;
+        task.ContinueWith(t =>
+        {
+            if (t.Exception != null)
+                Log.e($"[{tag}] Unhandled task exception: {t.Exception.Flatten().Message}", "NetworkManager");
+        }, TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously);
     }
     #endregion
 

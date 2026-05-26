@@ -1,23 +1,32 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <linker>
   <assembly fullname="FrameworkAssembly">
+    <type fullname="AchievementClaimS2C" preserve="all" />
+    <type fullname="AchievementInfo" preserve="all" />
+    <type fullname="AchievementListS2C" preserve="all" />
+    <type fullname="AchievementProgressS2C" preserve="all" />
+    <type fullname="AchievementUnlockS2C" preserve="all" />
     <type fullname="BaseBind`1" preserve="all" />
     <type fullname="ButtonBind" preserve="all" />
     <type fullname="CommandBase" preserve="all" />
     <type fullname="ConfigManager" preserve="all" />
     <type fullname="CreatePlayerBody" preserve="all" />
     <type fullname="EUILayer" preserve="all" />
+    <type fullname="IHotUpdateStartup" preserve="all" />
     <type fullname="ImageBind" preserve="all" />
     <type fullname="InputFieldBind" preserve="all" />
     <type fullname="LevelConfig" preserve="all" />
     <type fullname="Log" preserve="all" />
     <type fullname="LoginMessageS2C" preserve="all" />
     <type fullname="MacroCommandBase" preserve="all" />
+    <type fullname="MessageConst" preserve="all" />
+    <type fullname="MessageDispatcher" preserve="all" />
+    <type fullname="NetworkManager" preserve="all" />
+    <type fullname="NetworkMessageHelper" preserve="all" />
     <type fullname="NetworkModuleReflection" preserve="all" />
     <type fullname="NotificationConst" preserve="all" />
     <type fullname="PlayerInfo" preserve="all" />
     <type fullname="ProxyBase" preserve="all" />
-    <type fullname="ProxyConst" preserve="all" />
     <type fullname="PureMVC.Interfaces.ICommand" preserve="all" />
     <type fullname="PureMVC.Interfaces.IFacade" preserve="all" />
     <type fullname="PureMVC.Interfaces.INotification" preserve="all" />
@@ -27,7 +36,6 @@
     <type fullname="S2CResult" preserve="all" />
     <type fullname="SliderBind" preserve="all" />
     <type fullname="TextBind" preserve="all" />
-    <type fullname="TransformBind" preserve="all" />
     <type fullname="UIConst" preserve="all" />
     <type fullname="UIManager" preserve="all" />
     <type fullname="UIMediatorBase" preserve="all" />
@@ -37,6 +45,7 @@
   <assembly fullname="Google.Protobuf">
     <type fullname="Google.Protobuf.CodedInputStream" preserve="all" />
     <type fullname="Google.Protobuf.CodedOutputStream" preserve="all" />
+    <type fullname="Google.Protobuf.Collections.RepeatedField`1" preserve="all" />
     <type fullname="Google.Protobuf.Extension" preserve="all" />
     <type fullname="Google.Protobuf.IBufferMessage" preserve="all" />
     <type fullname="Google.Protobuf.IDeepCloneable`1" preserve="all" />
@@ -46,6 +55,7 @@
     <type fullname="Google.Protobuf.MessageParser" preserve="all" />
     <type fullname="Google.Protobuf.MessageParser`1" preserve="all" />
     <type fullname="Google.Protobuf.ParseContext" preserve="all" />
+    <type fullname="Google.Protobuf.ProtoPreconditions" preserve="all" />
     <type fullname="Google.Protobuf.Reflection.FileDescriptor" preserve="all" />
     <type fullname="Google.Protobuf.Reflection.GeneratedClrTypeInfo" preserve="all" />
     <type fullname="Google.Protobuf.Reflection.MessageDescriptor" preserve="all" />
@@ -58,7 +68,6 @@
     <type fullname="UnityEngine.Events.UnityAction" preserve="all" />
     <type fullname="UnityEngine.Events.UnityEvent" preserve="all" />
     <type fullname="UnityEngine.GameObject" preserve="all" />
-    <type fullname="UnityEngine.Mathf" preserve="all" />
     <type fullname="UnityEngine.Object" preserve="all" />
     <type fullname="UnityEngine.SerializeField" preserve="all" />
     <type fullname="UnityEngine.Transform" preserve="all" />
@@ -74,17 +83,17 @@
     <type fullname="UnityEngine.UI.Text" preserve="all" />
   </assembly>
   <assembly fullname="netstandard">
-    <type fullname="System.Action" preserve="all" />
     <type fullname="System.Action`1" preserve="all" />
+    <type fullname="System.Activator" preserve="all" />
     <type fullname="System.Array" preserve="all" />
     <type fullname="System.Boolean" preserve="all" />
     <type fullname="System.Byte" preserve="all" />
     <type fullname="System.CodeDom.Compiler.GeneratedCodeAttribute" preserve="all" />
     <type fullname="System.Collections.Generic.Dictionary`2" preserve="all" />
-    <type fullname="System.Collections.Generic.IEnumerable`1" preserve="all" />
+    <type fullname="System.Collections.Generic.IEnumerator`1" preserve="all" />
     <type fullname="System.Collections.Generic.IList`1" preserve="all" />
     <type fullname="System.Collections.Generic.List`1" preserve="all" />
-    <type fullname="System.Collections.Generic.List`1/Enumerator" preserve="all" />
+    <type fullname="System.Collections.IEnumerator" preserve="all" />
     <type fullname="System.ComponentModel.EditorBrowsableAttribute" preserve="all" />
     <type fullname="System.ComponentModel.EditorBrowsableState" preserve="all" />
     <type fullname="System.Convert" preserve="all" />
@@ -95,11 +104,10 @@
     <type fullname="System.Diagnostics.DebuggerDisplayAttribute" preserve="all" />
     <type fullname="System.Diagnostics.DebuggerNonUserCodeAttribute" preserve="all" />
     <type fullname="System.Func`1" preserve="all" />
-    <type fullname="System.Func`2" preserve="all" />
     <type fullname="System.IDisposable" preserve="all" />
     <type fullname="System.IEquatable`1" preserve="all" />
     <type fullname="System.Int32" preserve="all" />
-    <type fullname="System.Linq.Enumerable" preserve="all" />
+    <type fullname="System.Int64" preserve="all" />
     <type fullname="System.Object" preserve="all" />
     <type fullname="System.Predicate`1" preserve="all" />
     <type fullname="System.Runtime.CompilerServices.CompilationRelaxationsAttribute" preserve="all" />

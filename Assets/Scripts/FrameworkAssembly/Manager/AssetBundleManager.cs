@@ -1,6 +1,9 @@
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using UnityEngine;
 
 /// <summary>
@@ -14,13 +17,18 @@ public class AssetBundleManager
     #region Singleton
 
     private static AssetBundleManager instance;
+    private static readonly object _instanceLock = new object();
     public static AssetBundleManager Instance
     {
         get
         {
             if (instance == null)
             {
-                instance = new AssetBundleManager();
+                lock (_instanceLock)
+                {
+                    if (instance == null)
+                        instance = new AssetBundleManager();
+                }
             }
             return instance;
         }
@@ -32,14 +40,20 @@ public class AssetBundleManager
     #region Fields
 
     /// <summary>
-    /// Loaded AssetBundle cache: bundleName → LoadedBundle
+    /// Loaded AssetBundle cache: bundleName -> LoadedBundle.
+    /// ConcurrentDictionary for thread-safe Add/Remove; refCount uses Interlocked.
     /// </summary>
-    private Dictionary<string, LoadedBundle> loadedBundles = new Dictionary<string, LoadedBundle>();
+    private readonly ConcurrentDictionary<string, LoadedBundle> loadedBundles = new ConcurrentDictionary<string, LoadedBundle>();
 
     /// <summary>
-    /// Enhanced manifest parsed from manifest.json.
+    /// Lock for serializing bundle load operations (AssetBundle.LoadFromFile is not thread-safe).
     /// </summary>
-    private AssetBundleManifest manifest;
+    private readonly object _loadLock = new object();
+
+    /// <summary>
+    /// Enhanced manifest parsed from manifest.json. volatile for cross-thread visibility.
+    /// </summary>
+    private volatile AssetBundleManifest manifest;
 
     /// <summary>
     /// Base path for built-in bundles (StreamingAssets).
@@ -51,22 +65,58 @@ public class AssetBundleManager
     /// </summary>
     private string hotUpdateBundlePath;
 
-    private bool isInitialized = false;
+    private volatile bool isInitialized = false;
 
     #endregion
 
     #region Initialization
 
     /// <summary>
-    /// Initialize the AssetBundleManager. Must be called before any LoadAsset calls.
+    /// <summary>
+    /// Initialize the AssetBundleManager. Single coroutine entry point — must be awaited
+    /// (yield return) before any LoadAsset call.
+    ///
+    /// Internal platform branching:
+    ///   - PersistentDataPath manifest:        File API (all platforms — regular files, fast)
+    ///   - StreamingAssets manifest on Android: UnityWebRequest (jar URI inside APK)
+    ///   - StreamingAssets manifest elsewhere:  File API (regular path, fast)
     /// </summary>
     /// <param name="hotUpdateDir">Subdirectory under persistentDataPath for hot update bundles</param>
-    public void Initialize(string hotUpdateDir = "HotUpdate")
+    public IEnumerator InitializeCoroutine(string hotUpdateDir = "HotUpdate")
+    {
+        if (!PrepareInitPaths(hotUpdateDir))
+            yield break;
+
+        // Priority 1: persistentDataPath — always regular file IO, all platforms
+        manifest = LoadManifestFromFile(hotUpdateBundlePath);
+
+        // Priority 2: built-in StreamingAssets — branch on platform
+        if (manifest == null)
+        {
+            string builtInManifestPath = Path.Combine(builtInBundlePath, "manifest.json");
+            if (IsAndroidStreamingPath(builtInManifestPath))
+            {
+                // Android APK: must use UnityWebRequest (jar URI)
+                AssetBundleManifest loaded = null;
+                yield return LoadManifestFromStreamingAssetsCoroutine(builtInManifestPath, m => loaded = m);
+                manifest = loaded;
+            }
+            else
+            {
+                // PC / iOS / Editor: regular file IO, zero async overhead
+                manifest = LoadManifestFromFile(builtInBundlePath);
+            }
+        }
+
+        FinalizeInit();
+    }
+
+    private bool PrepareInitPaths(string hotUpdateDir)
     {
         if (isInitialized)
         {
             Log.d("AssetBundleManager already initialized, skipping", "AssetBundleManager");
-            return;
+            return false;
         }
 
         if (string.IsNullOrEmpty(hotUpdateDir))
@@ -75,48 +125,43 @@ public class AssetBundleManager
         if (string.IsNullOrEmpty(Application.streamingAssetsPath))
         {
             Log.w("Application.streamingAssetsPath is null, skipping AssetBundleManager init", "AssetBundleManager");
-            return;
+            return false;
         }
         if (string.IsNullOrEmpty(Application.persistentDataPath))
         {
             Log.w("Application.persistentDataPath is null, skipping AssetBundleManager init", "AssetBundleManager");
-            return;
+            return false;
         }
 
         builtInBundlePath = Path.Combine(Application.streamingAssetsPath, "HotUpdate", "assetbundles");
         hotUpdateBundlePath = Path.Combine(Application.persistentDataPath, hotUpdateDir);
+        return true;
+    }
 
-        // Try to load enhanced manifest from hot update path first, then built-in
-        manifest = LoadManifest(hotUpdateBundlePath) ?? LoadManifest(builtInBundlePath);
-
+    private void FinalizeInit()
+    {
         if (manifest != null)
         {
-            Log.d($"Manifest loaded: v{manifest.version}, {manifest.bundles.Count} bundles, platform={manifest.platform}",
-                "AssetBundleManager");
+            Log.d($"Manifest loaded: v{manifest.version}, {manifest.bundles.Count} bundles, platform={manifest.platform}", "AssetBundleManager");
         }
         else
         {
             Log.w("No manifest found, dependency resolution disabled", "AssetBundleManager");
         }
-
         isInitialized = true;
     }
 
-    private AssetBundleManifest LoadManifest(string directory)
+    private static bool IsAndroidStreamingPath(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return false;
+        return path.Contains("://") || path.StartsWith("jar:");
+    }
+
+    private AssetBundleManifest LoadManifestFromFile(string directory)
     {
         string manifestPath = Path.Combine(directory, "manifest.json");
-
-        // On Android, StreamingAssets are inside the APK and cannot be read via File API.
-        // Use UnityWebRequest for APK paths, File API for persistentDataPath.
-        if (manifestPath.Contains("://") || manifestPath.StartsWith("jar:"))
-        {
-            return LoadManifestFromStreamingAssets(manifestPath);
-        }
-
-        if (!File.Exists(manifestPath))
-        {
-            return null;
-        }
+        if (IsAndroidStreamingPath(manifestPath)) return null;
+        if (!File.Exists(manifestPath)) return null;
 
         try
         {
@@ -130,32 +175,48 @@ public class AssetBundleManager
         }
     }
 
-    private AssetBundleManifest LoadManifestFromStreamingAssets(string uri)
+    /// <summary>
+    /// Coroutine: load manifest from APK StreamingAssets via UnityWebRequest.
+    /// Result is delivered via callback to avoid blocking the main thread.
+    /// </summary>
+    private IEnumerator LoadManifestFromStreamingAssetsCoroutine(string uri, Action<AssetBundleManifest> onLoaded)
     {
+        AssetBundleManifest result = null;
+        UnityEngine.Networking.UnityWebRequest request = null;
         try
         {
-            using (var request = UnityEngine.Networking.UnityWebRequest.Get(uri))
-            {
-                var asyncOp = request.SendWebRequest();
-                // Blocking wait — called during initialization, acceptable
-                while (!asyncOp.isDone) { }
-
-                if (request.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
-                {
-                    string json = request.downloadHandler.text;
-                    return JsonUtility.FromJson<AssetBundleManifest>(json);
-                }
-                else
-                {
-                    Log.w($"Failed to load manifest from StreamingAssets: {request.error}", "AssetBundleManager");
-                }
-            }
+            request = UnityEngine.Networking.UnityWebRequest.Get(uri);
         }
         catch (Exception e)
         {
-            Log.w($"Failed to load manifest from StreamingAssets: {e.Message}", "AssetBundleManager");
+            Log.w($"Failed to create UWR for manifest: {e.Message}", "AssetBundleManager");
+            onLoaded?.Invoke(null);
+            yield break;
         }
-        return null;
+
+        using (request)
+        {
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+            {
+                try
+                {
+                    string json = request.downloadHandler.text;
+                    result = JsonUtility.FromJson<AssetBundleManifest>(json);
+                }
+                catch (Exception e)
+                {
+                    Log.w($"Failed to parse manifest from StreamingAssets: {e.Message}", "AssetBundleManager");
+                }
+            }
+            else
+            {
+                Log.w($"Failed to load manifest from StreamingAssets: {request.error}", "AssetBundleManager");
+            }
+        }
+
+        onLoaded?.Invoke(result);
     }
 
     #endregion
@@ -229,10 +290,11 @@ public class AssetBundleManager
     /// </summary>
     private AssetBundle LoadBundleWithDependencies(string bundleName)
     {
-        // Load dependencies first
-        if (manifest != null && manifest.dependencyGraph != null)
+        // Snapshot manifest to a local var for thread-safe read
+        var m = manifest;
+        if (m != null && m.dependencyGraph != null)
         {
-            if (manifest.dependencyGraph.TryGetValue(bundleName, out List<string> deps))
+            if (m.dependencyGraph.TryGetValue(bundleName, out List<string> deps))
             {
                 foreach (string dep in deps)
                 {
@@ -250,59 +312,71 @@ public class AssetBundleManager
 
     /// <summary>
     /// Load a single bundle. Checks hot update path first, then built-in.
+    /// Thread-safe: uses _loadLock to serialize AssetBundle.LoadFromFile + cache insertion.
     /// </summary>
     private AssetBundle LoadBundleInternal(string bundleName)
     {
-        // Already loaded?
+        // Already loaded? Increment refCount atomically.
         if (loadedBundles.TryGetValue(bundleName, out LoadedBundle existing))
         {
-            existing.refCount++;
+            Interlocked.Increment(ref existing.refCount);
             return existing.bundle;
         }
 
-        AssetBundle bundle = null;
-        string sourcePath = null;
-
-        // Priority 1: Hot update path (persistentDataPath)
-        string hotUpdatePath = Path.Combine(hotUpdateBundlePath, bundleName);
-        if (File.Exists(hotUpdatePath))
+        lock (_loadLock)
         {
-            bundle = AssetBundle.LoadFromFile(hotUpdatePath);
+            // Double-check after acquiring lock
+            if (loadedBundles.TryGetValue(bundleName, out existing))
+            {
+                Interlocked.Increment(ref existing.refCount);
+                return existing.bundle;
+            }
+
+            AssetBundle bundle = null;
+            string sourcePath = null;
+
+            // Priority 1: Hot update path (persistentDataPath)
+            string hotUpdatePath = Path.Combine(hotUpdateBundlePath, bundleName);
+            if (File.Exists(hotUpdatePath))
+            {
+                bundle = AssetBundle.LoadFromFile(hotUpdatePath);
+                if (bundle != null)
+                {
+                    sourcePath = hotUpdatePath;
+                    Log.d($"Bundle loaded from hot update: {bundleName}", "AssetBundleManager");
+                }
+            }
+
+            // Priority 2: Built-in path (StreamingAssets)
+            // On Android, StreamingAssets is inside APK — File.Exists fails but
+            // AssetBundle.LoadFromFile handles the jar: URI internally.
+            if (bundle == null)
+            {
+                string builtInPath = Path.Combine(builtInBundlePath, bundleName);
+                bundle = AssetBundle.LoadFromFile(builtInPath);
+                if (bundle != null)
+                {
+                    sourcePath = builtInPath;
+                    Log.d($"Bundle loaded from built-in: {bundleName}", "AssetBundleManager");
+                }
+            }
+
             if (bundle != null)
             {
-                sourcePath = hotUpdatePath;
-                Log.d($"Bundle loaded from hot update: {bundleName}", "AssetBundleManager");
+                var entry = new LoadedBundle
+                {
+                    bundle = bundle,
+                    refCount = 1,
+                    sourcePath = sourcePath,
+                    bundleName = bundleName
+                };
+                loadedBundles[bundleName] = entry;
+                return bundle;
             }
-        }
 
-        // Priority 2: Built-in path (StreamingAssets)
-        // On Android, StreamingAssets is inside APK — File.Exists fails but
-        // AssetBundle.LoadFromFile handles the jar: URI internally.
-        if (bundle == null)
-        {
-            string builtInPath = Path.Combine(builtInBundlePath, bundleName);
-            bundle = AssetBundle.LoadFromFile(builtInPath);
-            if (bundle != null)
-            {
-                sourcePath = builtInPath;
-                Log.d($"Bundle loaded from built-in: {bundleName}", "AssetBundleManager");
-            }
+            Log.w($"Bundle not found: {bundleName}", "AssetBundleManager");
+            return null;
         }
-
-        if (bundle != null)
-        {
-            loadedBundles[bundleName] = new LoadedBundle
-            {
-                bundle = bundle,
-                refCount = 1,
-                sourcePath = sourcePath,
-                bundleName = bundleName
-            };
-            return bundle;
-        }
-
-        Log.w($"Bundle not found: {bundleName}", "AssetBundleManager");
-        return null;
     }
 
     #endregion
@@ -310,22 +384,25 @@ public class AssetBundleManager
     #region Bundle Unloading
 
     /// <summary>
-    /// Unload a specific bundle. Decrements reference count.
+    /// Unload a specific bundle. Decrements reference count atomically.
     /// Bundle is actually unloaded when refCount reaches 0.
     /// </summary>
     /// <param name="bundleName">Bundle name</param>
     /// <param name="unloadAllLoadedObjects">If true, also destroys all loaded assets from this bundle</param>
     public void UnloadBundle(string bundleName, bool unloadAllLoadedObjects = false)
     {
-        if (loadedBundles.TryGetValue(bundleName, out LoadedBundle loaded))
+        if (!loadedBundles.TryGetValue(bundleName, out LoadedBundle loaded))
+            return;
+
+        int newCount = Interlocked.Decrement(ref loaded.refCount);
+        if (newCount > 0) return;
+
+        // Atomic remove only if still mapped to this exact entry
+        var pair = new KeyValuePair<string, LoadedBundle>(bundleName, loaded);
+        if (((ICollection<KeyValuePair<string, LoadedBundle>>)loadedBundles).Remove(pair))
         {
-            loaded.refCount--;
-            if (loaded.refCount <= 0)
-            {
-                loaded.bundle.Unload(unloadAllLoadedObjects);
-                loadedBundles.Remove(bundleName);
-                Log.d($"Bundle unloaded: {bundleName}", "AssetBundleManager");
-            }
+            try { loaded.bundle?.Unload(unloadAllLoadedObjects); } catch { }
+            Log.d($"Bundle unloaded: {bundleName}", "AssetBundleManager");
         }
     }
 
@@ -334,14 +411,15 @@ public class AssetBundleManager
     /// </summary>
     public void UnloadAllBundles(bool unloadAllLoadedObjects = false)
     {
-        foreach (var kv in loadedBundles)
+        // Snapshot keys to avoid collection-modified-during-enumeration
+        var keys = new List<string>(loadedBundles.Keys);
+        foreach (var key in keys)
         {
-            if (kv.Value.bundle != null)
+            if (loadedBundles.TryRemove(key, out LoadedBundle loaded))
             {
-                kv.Value.bundle.Unload(unloadAllLoadedObjects);
+                try { loaded.bundle?.Unload(unloadAllLoadedObjects); } catch { }
             }
         }
-        loadedBundles.Clear();
         Log.d("All bundles unloaded", "AssetBundleManager");
     }
 
@@ -350,27 +428,25 @@ public class AssetBundleManager
     /// </summary>
     public void UnloadBundlesByLayer(AssetBundleLayer layer, bool unloadAllLoadedObjects = false)
     {
-        var toRemove = new List<string>();
-        foreach (var kv in loadedBundles)
+        var m = manifest;
+        if (m == null) return;
+
+        var keys = new List<string>(loadedBundles.Keys);
+        int removed = 0;
+        foreach (var key in keys)
         {
-            // Check manifest for layer info
-            if (manifest != null)
+            var entry = m.bundles.Find(b => b.name == key);
+            if (entry != null && entry.layer == layer)
             {
-                var entry = manifest.bundles.Find(b => b.name == kv.Key);
-                if (entry != null && entry.layer == layer)
+                if (loadedBundles.TryRemove(key, out LoadedBundle loaded))
                 {
-                    kv.Value.bundle.Unload(unloadAllLoadedObjects);
-                    toRemove.Add(kv.Key);
+                    try { loaded.bundle?.Unload(unloadAllLoadedObjects); } catch { }
+                    removed++;
                 }
             }
         }
 
-        foreach (string name in toRemove)
-        {
-            loadedBundles.Remove(name);
-        }
-
-        Log.d($"Unloaded {toRemove.Count} bundles from layer: {layer}", "AssetBundleManager");
+        Log.d($"Unloaded {removed} bundles from layer: {layer}", "AssetBundleManager");
     }
 
     #endregion
@@ -393,7 +469,7 @@ public class AssetBundleManager
         manifest = newManifest;
         if (manifest != null)
         {
-            UnityEngine.Debug.Log($"[AssetBundleManager] Manifest set: v{manifest.version}, {manifest.bundles.Count} bundles");
+            Log.d($"Manifest set: v{manifest.version}, {manifest.bundles.Count} bundles", "AssetBundleManager");
         }
     }
 
@@ -404,23 +480,24 @@ public class AssetBundleManager
     {
         try
         {
-            UnityEngine.Debug.Log("[AssetBundleManager] ReloadManifest called");
-            UnityEngine.Debug.Log($"[AssetBundleManager] hotUpdateBundlePath={hotUpdateBundlePath}");
+            Log.d("ReloadManifest called", "AssetBundleManager");
+            Log.d($"hotUpdateBundlePath={hotUpdateBundlePath}", "AssetBundleManager");
             string manifestPath = Path.Combine(hotUpdateBundlePath, "manifest.json");
-            UnityEngine.Debug.Log($"[AssetBundleManager] Checking manifest at: {manifestPath}, exists={File.Exists(manifestPath)}");
-            manifest = LoadManifest(hotUpdateBundlePath) ?? manifest;
-            if (manifest != null)
+            Log.d($"Checking manifest at: {manifestPath}, exists={File.Exists(manifestPath)}", "AssetBundleManager");
+            var loaded = LoadManifestFromFile(hotUpdateBundlePath);
+            if (loaded != null)
             {
-                UnityEngine.Debug.Log($"[AssetBundleManager] Manifest reloaded: v{manifest.version}, {manifest.bundles.Count} bundles");
+                manifest = loaded;
+                Log.d($"Manifest reloaded: v{manifest.version}, {manifest.bundles.Count} bundles", "AssetBundleManager");
             }
             else
             {
-                UnityEngine.Debug.LogWarning("[AssetBundleManager] Manifest reload failed, manifest is still null");
+                Log.w("Manifest reload failed, manifest is unchanged", "AssetBundleManager");
             }
         }
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            UnityEngine.Debug.LogError($"[AssetBundleManager] ReloadManifest exception: {ex}");
+            Log.e($"ReloadManifest exception: {ex}", "AssetBundleManager");
         }
     }
 
@@ -445,7 +522,9 @@ public class AssetBundleManager
     /// </summary>
     public int GetBundleRefCount(string bundleName)
     {
-        return loadedBundles.TryGetValue(bundleName, out LoadedBundle loaded) ? loaded.refCount : 0;
+        return loadedBundles.TryGetValue(bundleName, out LoadedBundle loaded)
+            ? Interlocked.CompareExchange(ref loaded.refCount, 0, 0)
+            : 0;
     }
 
     #endregion

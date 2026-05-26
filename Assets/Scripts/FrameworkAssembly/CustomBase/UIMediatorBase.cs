@@ -10,6 +10,9 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
     protected bool isShowing = false;
     protected bool isEventsRegistered = false;
 
+    // True only after the constructor finishes. Used to skip side-effects in initial Hide().
+    private bool _constructed = false;
+
     /// <summary>
     /// Retrieve a registered proxy by name.
     /// </summary>
@@ -35,6 +38,7 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
         InitUIComponents();
         // Note: Don't register to UpdateManager here, will register when Show() is called
         Hide();
+        _constructed = true;
     }
 
     /// <summary>
@@ -188,7 +192,10 @@ public abstract class UIMediatorBase : Mediator, IUpdatable
         canvasGroup.blocksRaycasts = false;
         canvasGroup.interactable = false;
         isShowing = false;
-        
+
+        // Skip side-effects during construction: not registered yet, no Lua available.
+        if (!_constructed) return;
+
         // Unregister from UpdateManager when hiding
         UnregisterFromUpdateManager();
         

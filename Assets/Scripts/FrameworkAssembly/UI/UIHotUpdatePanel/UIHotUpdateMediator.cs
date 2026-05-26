@@ -123,6 +123,7 @@ public class UIHotUpdateMediator : UIMediatorBase
         {
             case HotUpdateState.Idle:
             case HotUpdateState.Checking:
+            case HotUpdateState.UpdateAvailable:
                 SetStatus($"v{hotUpdateMgr.CurrentManifest?.version}\n{hotUpdateMgr.StatusMessage}");
                 SetButtonEnabled(true);
                 if (progressSlider != null) progressSlider.value = 0f;

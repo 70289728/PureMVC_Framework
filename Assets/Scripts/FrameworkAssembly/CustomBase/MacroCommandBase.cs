@@ -19,7 +19,9 @@ public abstract class MacroCommandBase : MacroCommand
         }
         catch (System.Exception e)
         {
-            Log.e($"MacroCommand {GetType().Name} execute error: {e.Message}", "MacroCommandBase");
+            Log.e($"MacroCommand [{GetType().Name}] unhandled exception:\n{e}", "MacroCommandBase");
+            Facade.SendNotification(NotificationConst.SYS_ERROR,
+                $"MacroCommand [{GetType().Name}] failed: {e.Message}");
         }
     }
 

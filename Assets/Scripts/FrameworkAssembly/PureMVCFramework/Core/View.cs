@@ -122,25 +122,30 @@ namespace PureMVC.Core
         /// <param name="notification"></param>
         public virtual void NotifyObservers(INotification notification)
         {
-            // Get a reference to the observers list for this notification name
+            // Snapshot the observers list under _observerLock so we don't read it
+            // while another thread is mutating it via Add/RemoveAt — would otherwise
+            // throw InvalidOperationException on resize race.
+            List<IObserver> snapshot = null;
             if (observerMap.TryGetValue(notification.Name, out var observersRef))
             {
-                // Copy observers from reference array to working array, 
-                // since the reference array may change during the notification loop
-                var observers = new List<IObserver>(observersRef);
-
-                // Notify Observers from the working array
-                // Wrap each observer in try-catch so one crashing observer doesn't break others
-                foreach (var observer in observers)
+                lock (_observerLock)
                 {
-                    try
-                    {
-                        observer.NotifyObserver(notification);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.e($"Observer [{observer.GetType().Name}] threw on notification [{notification.Name}]: {ex}", "View");
-                    }
+                    snapshot = new List<IObserver>(observersRef);
+                }
+            }
+            if (snapshot == null) return;
+
+            // Notify Observers from the working array (lock-free).
+            // Wrap each observer in try-catch so one crashing observer doesn't break others.
+            foreach (var observer in snapshot)
+            {
+                try
+                {
+                    observer.NotifyObserver(notification);
+                }
+                catch (Exception ex)
+                {
+                    Log.e($"Observer [{observer.GetType().Name}] threw on notification [{notification.Name}]: {ex}", "View");
                 }
             }
         }

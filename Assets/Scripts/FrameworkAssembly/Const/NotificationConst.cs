@@ -149,6 +149,9 @@ public static class NotificationConst
     public static string BAG_LIST_UPDATED => Get("BAG_LIST_UPDATED");
     public static string BAG_ITEM_CHANGED => Get("BAG_ITEM_CHANGED");
 
+    // --- System ---
+    public static string SYS_ERROR => Get("SYS_ERROR");
+
     // --- Save ---
     public static string SAVE_DATA => Get("SAVE_DATA");
     public static string LOAD_DATA => Get("LOAD_DATA");
@@ -196,6 +199,7 @@ public static class NotificationConst
         Register("BAG_LIST_UPDATED"); Register("BAG_ITEM_CHANGED");
         Register("SAVE_DATA"); Register("LOAD_DATA");
         Register("PAUSE_GAME"); Register("RESUME_GAME");
+        Register("SYS_ERROR");
     }
 
     /// <summary>

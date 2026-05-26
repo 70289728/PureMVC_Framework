@@ -43,6 +43,15 @@ public class HotUpdateManager
 
     private bool isInitialized = false;
 
+    // Debounce flags for StartCheck / StartDownload to prevent duplicate coroutine launches
+    private bool _isChecking = false;
+    private bool _isDownloading = false;
+
+    // Cached reflection: GameMain.ApplyHotUpdate(byte[]) — resolved once on first DLL apply
+    private static System.Reflection.MethodInfo _applyHotUpdateMethod;
+    private static object _gameMainInstance;
+    private static bool _applyReflectionResolved = false;
+
     public IAssetLoader AssetLoader => assetLoader;
     public ILuaLoader LuaLoader => luaLoader;
 
@@ -93,7 +102,19 @@ public class HotUpdateManager
             Log.e("HotUpdateManager not initialized", "HotUpdateManager");
             return;
         }
-        CoroutineRunner.Instance.StartCoroutine(CheckCoroutine());
+        if (_isChecking)
+        {
+            Log.w("StartCheck already running, ignoring duplicate call", "HotUpdateManager");
+            return;
+        }
+        _isChecking = true;
+        CoroutineRunner.Instance.StartCoroutine(CheckCoroutineWrapper());
+    }
+
+    private IEnumerator CheckCoroutineWrapper()
+    {
+        yield return CheckCoroutine();
+        _isChecking = false;
     }
 
     private IEnumerator CheckCoroutine()
@@ -128,20 +149,15 @@ public class HotUpdateManager
         {
             Log.d("All files are up to date", "HotUpdateManager");
             versionChecker.SaveVersion(manifest.version);
-            // Save manifest so AssetBundleManager can discover existing bundles after restart
-            SaveManifestToDisk();
-            // Also update the in-memory manifest so ReloadManifest picks up hotfix bundles
-            AssetBundleManager.Instance.SetManifest(versionChecker.RawManifest);
-            AssetBundleManager.Instance.ReloadManifest();
             SetState(HotUpdateState.Success, "All files up to date");
             yield break;
         }
 
         // Show update info and wait for user confirmation.
         // Open UI first (registers mediator), then set state so the mediator
-        // receives HOT_UPDATE_STATE_CHANGED with Idle and displays update info.
+        // receives HOT_UPDATE_STATE_CHANGED with UpdateAvailable and displays update info.
         Facade.Instance.SendNotification(NotificationConst.HOT_UPDATE_AVAILABLE);
-        SetState(HotUpdateState.Idle, $"Update available: {filesToDownload.Count} files");
+        SetState(HotUpdateState.UpdateAvailable, $"Update available: {filesToDownload.Count} files");
     }
 
     private List<HotUpdateFileEntry> filesToDownload;
@@ -156,7 +172,19 @@ public class HotUpdateManager
             Log.w("No files to download", "HotUpdateManager");
             return;
         }
-        CoroutineRunner.Instance.StartCoroutine(DownloadCoroutine());
+        if (_isDownloading)
+        {
+            Log.w("StartDownload already running, ignoring duplicate call", "HotUpdateManager");
+            return;
+        }
+        _isDownloading = true;
+        CoroutineRunner.Instance.StartCoroutine(DownloadCoroutineWrapper());
+    }
+
+    private IEnumerator DownloadCoroutineWrapper()
+    {
+        yield return DownloadCoroutine();
+        _isDownloading = false;
     }
 
     private IEnumerator DownloadCoroutine()
@@ -185,23 +213,19 @@ public class HotUpdateManager
         bool dllApplied = false;
         if (dllLoader.ReadHotUpdateAssemblyBytes(out byte[] hotDllBytes))
         {
-            var gameMainType = System.Type.GetType("GameMain,AOTAssembly")
-                           ?? System.Type.GetType("GameMain");
-            if (gameMainType != null)
+            // Resolve GameMain.ApplyHotUpdate(byte[]) once, then cache MethodInfo+instance.
+            ResolveApplyHotUpdateReflection();
+            if (_applyHotUpdateMethod != null && _gameMainInstance != null)
             {
-                var instanceProp = gameMainType.GetProperty("Instance",
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                var gm = instanceProp?.GetValue(null);
-                if (gm != null)
+                try
                 {
-                    var applyMethod = gameMainType.GetMethod("ApplyHotUpdate",
-                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                    if (applyMethod != null)
-                    {
-                        applyMethod.Invoke(gm, new object[] { hotDllBytes });
-                        dllApplied = true;
-                        Log.d("Hot update DLL cached for next startup", "HotUpdateManager");
-                    }
+                    _applyHotUpdateMethod.Invoke(_gameMainInstance, new object[] { hotDllBytes });
+                    dllApplied = true;
+                    Log.d("Hot update DLL cached for next startup", "HotUpdateManager");
+                }
+                catch (Exception e)
+                {
+                    Log.e($"ApplyHotUpdate invocation failed: {e.Message}", "HotUpdateManager");
                 }
             }
             if (!dllApplied) dllApplied = dllLoader.LoadHotUpdateAssembly();
@@ -302,6 +326,39 @@ public class HotUpdateManager
                 return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// Resolve GameMain.ApplyHotUpdate(byte[]) reflection once and cache it.
+    /// GameMain lives in AOTAssembly which FrameworkAssembly cannot reference, so reflection is required.
+    /// </summary>
+    private void ResolveApplyHotUpdateReflection()
+    {
+        if (_applyReflectionResolved) return;
+        _applyReflectionResolved = true;
+
+        var gameMainType = Type.GetType("GameMain,AOTAssembly") ?? Type.GetType("GameMain");
+        if (gameMainType == null)
+        {
+            Log.w("GameMain type not found via reflection", "HotUpdateManager");
+            return;
+        }
+
+        var instanceProp = gameMainType.GetProperty("Instance",
+            BindingFlags.Public | BindingFlags.Static);
+        _gameMainInstance = instanceProp?.GetValue(null);
+        if (_gameMainInstance == null)
+        {
+            Log.w("GameMain.Instance is null", "HotUpdateManager");
+            return;
+        }
+
+        _applyHotUpdateMethod = gameMainType.GetMethod("ApplyHotUpdate",
+            BindingFlags.Public | BindingFlags.Instance);
+        if (_applyHotUpdateMethod == null)
+        {
+            Log.w("GameMain.ApplyHotUpdate method not found", "HotUpdateManager");
+        }
     }
 }
 

@@ -26249,7 +26249,7 @@ IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR FeatureSetDescriptor_t0B91AB99D53C538DEA14873
 		int32_t L_1 = ___0_edition;
 		NullCheck(L_0);
 		bool L_2;
-		L_2 = InterfaceFuncInvoker2< bool, int32_t, FeatureSetDescriptor_t0B91AB99D53C538DEA1487304C0880F066075D34** >::Invoke(0, IReadOnlyDictionary_2_tDB667580E71CBA7A29CDED002077FD1CAAA2069F_il2cpp_TypeInfo_var, L_0, L_1, (&V_0));
+		L_2 = InterfaceFuncInvoker2< bool, int32_t, FeatureSetDescriptor_t0B91AB99D53C538DEA1487304C0880F066075D34** >::Invoke(1, IReadOnlyDictionary_2_tDB667580E71CBA7A29CDED002077FD1CAAA2069F_il2cpp_TypeInfo_var, L_0, L_1, (&V_0));
 		if (L_2)
 		{
 			goto IL_0025;
@@ -36101,7 +36101,7 @@ IL_0056:
 		PropertyInfo_t* L_15 = V_0;
 		NullCheck(L_15);
 		bool L_16;
-		L_16 = VirtualFuncInvoker0< bool >::Invoke(17, L_15);
+		L_16 = VirtualFuncInvoker0< bool >::Invoke(18, L_15);
 		if (L_16)
 		{
 			goto IL_007a;

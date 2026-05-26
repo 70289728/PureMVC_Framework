@@ -26,6 +26,7 @@ public static class ConfigManager
     #region Fields
 
     private static Dictionary<Type, object> configCache = new Dictionary<Type, object>();
+    private static readonly object _cacheLock = new object();
 
     /// <summary>
     /// Lua config loader interface. Set this to enable Lua-based config loading.
@@ -54,10 +55,13 @@ public static class ConfigManager
     public static void Load<T>() where T : class
     {
         Type type = typeof(T);
-        if (configCache.ContainsKey(type))
+        lock (_cacheLock)
         {
-            Log.d($"Config already loaded: {type.Name}", "ConfigManager");
-            return;
+            if (configCache.ContainsKey(type))
+            {
+                Log.d($"Config already loaded: {type.Name}", "ConfigManager");
+                return;
+            }
         }
 
         // Priority 1: Lua config loader (future)
@@ -66,7 +70,7 @@ public static class ConfigManager
             List<T> luaData = LuaConfigLoader.LoadConfig<T>();
             if (luaData != null && luaData.Count > 0)
             {
-                configCache[type] = luaData;
+                lock (_cacheLock) { configCache[type] = luaData; }
                 Log.d($"Loaded config via Lua: {type.Name} ({luaData.Count} items)", "ConfigManager");
                 return;
             }
@@ -76,7 +80,7 @@ public static class ConfigManager
         List<T> items = LoadFromAssetBundle<T>();
         if (items != null)
         {
-            configCache[type] = items;
+            lock (_cacheLock) { configCache[type] = items; }
             Log.d($"Loaded config via AssetBundle: {type.Name} ({items.Count} items)", "ConfigManager");
             return;
         }
@@ -86,7 +90,7 @@ public static class ConfigManager
         items = LoadFromAssetDatabase<T>();
         if (items != null)
         {
-            configCache[type] = items;
+            lock (_cacheLock) { configCache[type] = items; }
             Log.d($"Loaded config via AssetDatabase: {type.Name} ({items.Count} items)", "ConfigManager");
             return;
         }
@@ -131,7 +135,7 @@ public static class ConfigManager
     /// </summary>
     public static void Register<T>(List<T> dataList) where T : class
     {
-        configCache[typeof(T)] = dataList;
+        lock (_cacheLock) { configCache[typeof(T)] = dataList; }
         Log.d($"Registered config: {typeof(T).Name} ({dataList.Count} items)", "ConfigManager");
     }
 
@@ -222,12 +226,15 @@ public static class ConfigManager
     public static List<T> GetAll<T>() where T : class
     {
         Type type = typeof(T);
-        if (!configCache.ContainsKey(type))
+        lock (_cacheLock)
         {
-            Log.w($"Config not loaded: {type.Name}. Call ConfigManager.Load() first.", "ConfigManager");
-            return null;
+            if (!configCache.ContainsKey(type))
+            {
+                Log.w($"Config not loaded: {type.Name}. Call ConfigManager.Load() first.", "ConfigManager");
+                return null;
+            }
+            return configCache[type] as List<T>;
         }
-        return configCache[type] as List<T>;
     }
 
     /// <summary>
@@ -235,7 +242,7 @@ public static class ConfigManager
     /// </summary>
     public static bool IsLoaded<T>()
     {
-        return configCache.ContainsKey(typeof(T));
+        lock (_cacheLock) { return configCache.ContainsKey(typeof(T)); }
     }
 
     #endregion
@@ -247,7 +254,7 @@ public static class ConfigManager
     /// </summary>
     public static void ClearAll()
     {
-        configCache.Clear();
+        lock (_cacheLock) { configCache.Clear(); }
         Log.d("All configs cleared", "ConfigManager");
     }
 

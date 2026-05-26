@@ -13,6 +13,9 @@ public class ShopProxy : ProxyBase
     private List<ShopItem> _shopConfig;
     private Dictionary<int, int> _buyRecords = new Dictionary<int, int>();
 
+    // Track pending buy request for request-response matching
+    private int _pendingShopItemId = 0;
+
     public ShopProxy() : base(NAME, null) { }
 
     public override void OnRegister()
@@ -85,6 +88,7 @@ public class ShopProxy : ProxyBase
     /// </summary>
     public void BuyItem(int shopItemId)
     {
+        _pendingShopItemId = shopItemId;
         NetworkMessageHelper.SendShopBuy(shopItemId);
     }
 
@@ -112,17 +116,36 @@ public class ShopProxy : ProxyBase
     private void OnShopBuyS2C(byte[] body)
     {
         var resp = NetworkMessageHelper.ParseShopBuyS2C(body);
+
+        // Client-side validation #1: data legality
+        if (resp.ShopItemId <= 0)
+        {
+            Log.e($"Shop buy response: invalid ShopItemId={resp.ShopItemId}", NAME);
+            SendNotification(NotificationConst.SHOW_TIP, "Invalid shop item");
+            return;
+        }
+        if (resp.Rst.Result && resp.GoldRemaining < 0)
+        {
+            Log.e($"Shop buy response: negative GoldRemaining={resp.GoldRemaining}", NAME);
+            SendNotification(NotificationConst.SHOW_TIP, "Invalid server data");
+            return;
+        }
+
+        // Client-side validation #2: request-response matching
+        if (_pendingShopItemId != 0 && resp.ShopItemId != _pendingShopItemId)
+        {
+            Log.w($"Shop buy response mismatch: expected id={_pendingShopItemId}, got id={resp.ShopItemId}", NAME);
+        }
+        _pendingShopItemId = 0;
+
         if (resp.Rst.Result)
         {
             _buyRecords[resp.ShopItemId] = resp.BoughtCount;
             Log.d($"Buy success: shopItemId={resp.ShopItemId}, bought={resp.BoughtCount}, gold={resp.GoldRemaining}", NAME);
 
-            // Sync gold to UserProxy
+            // Sync gold to UserProxy via proper API
             var userProxy = GetProxy<UserProxy>(ProxyConst.USER_PROXY);
-            if (userProxy?.userData != null)
-            {
-                userProxy.userData.Gold = resp.GoldRemaining;
-            }
+            userProxy?.SetGold(resp.GoldRemaining);
 
             // Request updated bag list since server added item
             NetworkMessageHelper.SendBagList();

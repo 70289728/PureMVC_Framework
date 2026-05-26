@@ -86,6 +86,10 @@ public class GameMain : MonoBehaviour
         return;
 #else
         // Runtime: priority chain — persistent cache > AOT-embedded
+        // IMPORTANT: This path MUST stay in sync with HotUpdateConfig.localHotUpdateDir.
+        // Awake runs before HotUpdateManager.Initialize, so we cannot read Config here.
+        // If you change localHotUpdateDir in HotUpdateConfig, also update this string and
+        // the matching one in ApplyHotUpdate() below — otherwise hot-update DLL won't be found on next cold start.
         string cacheDir = Path.Combine(Application.persistentDataPath, "HotUpdate", "cache");
         string cachePath = Path.Combine(cacheDir, "HotUpdateAssembly.dll");
 
@@ -155,6 +159,9 @@ public class GameMain : MonoBehaviour
             return;
         }
 
+        // IMPORTANT: This path MUST match the cacheDir in ResolveHotAssembly() (Awake-time read of the same DLL).
+        // See the warning comment there. Do not switch to HotUpdateManager.Config.localHotUpdateDir without
+        // also updating ResolveHotAssembly — otherwise next cold start will not find the cached DLL.
         string cacheDir = Path.Combine(Application.persistentDataPath, "HotUpdate", "cache");
         string cachePath = Path.Combine(cacheDir, "HotUpdateAssembly.dll");
         try
@@ -188,18 +195,18 @@ public class GameMain : MonoBehaviour
     {
         // Trigger singleton initialization for all managers (FrameworkAssembly — direct access)
         UIManager.Instance.Init();
-        HotUpdateManager.Instance.Initialize();
-        AssetManager.Instance.SetAssetLoader(null); // will be set after hot update completes
-        // Skip AB init in Editor — AssetDatabase provides assets directly
-#if !UNITY_EDITOR
-        AssetBundleManager.Instance.Initialize("HotUpdate");
-#endif
-        NetworkManager.Instance.GetHashCode(); // ensure awake triggered
-        UpdateManager.Instance.GetHashCode();
-        TimerManager.Instance.GetHashCode();
-        AudioManager.Instance.GetHashCode();
-        ObjectPoolManager.Instance.GetHashCode();
-        GameSceneManager.Instance.GetHashCode();
+        HotUpdateManager.Instance.Initialize(); // also assigns the AssetLoader to AssetManager
+        // Note: AssetBundleManager is initialized as a coroutine step at the start of StartupFlow().
+        // Editor still skips AB init there (AssetDatabase provides assets directly).
+
+        // Touch each Instance to trigger lazy singleton creation / Awake side-effects.
+        // Use discard (_) instead of GetHashCode() — clearer intent, same effect.
+        _ = NetworkManager.Instance;
+        _ = UpdateManager.Instance;
+        _ = TimerManager.Instance;
+        _ = AudioManager.Instance;
+        _ = ObjectPoolManager.Instance;
+        _ = GameSceneManager.Instance;
 
         // Managers accessed via Instance for actual API calls
         RedDotManager.Instance.Initialize();
@@ -212,23 +219,55 @@ public class GameMain : MonoBehaviour
     {
         Log.d("Starting hot update check...", "GameMain");
 
+        // Step 0: AssetBundleManager async init (skip in Editor — uses AssetDatabase directly).
+        // Single coroutine entry; internal platform branching uses File API on PC/iOS, UnityWebRequest on Android.
+        // Hardcoded "HotUpdate" matches HotUpdateConfig.localHotUpdateDir default — keep all three GameMain
+        // references in lock-step. See ResolveHotAssembly warning.
+#if !UNITY_EDITOR
+        yield return AssetBundleManager.Instance.InitializeCoroutine("HotUpdate");
+#endif
+
         // Init, GameStart sends STARTUP → HotUpdateCommand → check → UI or success
         InitModule();
         GameStart();  // This sends STARTUP → StartupMacroCommand → HotUpdateCommand
         ConnectServer();
 
-        // Editor: skip wait (AssetDatabase provides assets directly)
-#if !UNITY_EDITOR
+        // Wait for hot update state machine to settle to a "done" state before opening Login.
+        // States: 0=Idle 1=Checking 2=UpdateAvailable 3=Downloading 4=Verifying 5=Applying 6=Success 7=Failed
+        // Done states: Success, Failed, Applying — final terminal states.
+        // Intermediate states (Checking, UpdateAvailable, Downloading, Verifying) require continued waiting:
+        //   - UpdateAvailable: user is making a choice, the hot update UI is showing — must NOT open Login yet.
+        //   - Idle with grace period: only valid as "no server / no update needed" early-exit (set by CheckCoroutine
+        //     line 132 + yield break). Once another state has been observed, Idle should never come back.
         float timeout = 30f;
         float elapsed = 0f;
+        bool sawNonIdle = false;
         while (true)
         {
             elapsed += Time.deltaTime;
-            int stateVal = (int)HotUpdateManager.Instance.State;
-            if (stateVal == 4 || stateVal == 5 || elapsed > timeout) break;
+            var state = HotUpdateManager.Instance.State;
+
+            // Terminal states — break out
+            if (state == HotUpdateState.Success ||
+                state == HotUpdateState.Failed ||
+                state == HotUpdateState.Applying)
+                break;
+
+            // Track if we've ever left Idle. Once we have, never short-circuit on Idle again
+            // (would only happen if CheckCoroutine completed with no update — already handled by Success path).
+            if (state != HotUpdateState.Idle) sawNonIdle = true;
+
+            // Idle short-circuit only valid BEFORE any transition (covers "no server" early-exit case),
+            // and only after a small grace period to let the coroutine actually start.
+            if (!sawNonIdle && state == HotUpdateState.Idle && elapsed > 0.5f) break;
+
+            // Hard timeout
+            if (elapsed > timeout) break;
+
             yield return null;
         }
 
+#if !UNITY_EDITOR
         // Reload AB manifest so newly downloaded bundles are available
         AssetBundleManager.Instance.ReloadManifest();
 
@@ -266,6 +305,10 @@ public class GameMain : MonoBehaviour
         InvokeHotUpdateConst("HotUpdateMessageConst");
         InvokeHotUpdateConst("HotUpdateProxyConst");
         InvokeHotUpdateConst("HotUpdatePlayerPrefsConst");
+
+        // Freeze UI registry: Base + HotUpdate UI definitions are now complete.
+        // Subsequent RegisterUI calls will be rejected with a warning.
+        UIConst.Instance.Freeze();
 
         // Initialize Lua subsystem
         LuaBootstrap.Instance.Initialize();

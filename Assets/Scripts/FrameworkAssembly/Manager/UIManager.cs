@@ -115,38 +115,22 @@ public class UIManager
     #endregion
 
     #region Create Mediator
-    private UIMediatorBase CreateMediator(string uiName, GameObject viewObj, int layer)
-    {
-        // Resolve mediator type by convention: "UI{Name}Mediator"
-        // Search all loaded assemblies (covers both FrameworkAssembly and HotUpdateAssembly)
-        var type = FindMediatorType(uiName);
-        if (type == null)
-        {
-            Log.w($"Mediator type not found for UI: {uiName}", "UIManager");
-            return null;
-        }
-        try
-        {
-            return (UIMediatorBase)Activator.CreateInstance(type, uiName, viewObj, layer, false);
-        }
-        catch (Exception e)
-        {
-            Log.e($"Failed to create mediator for {uiName}: {e.Message}", "UIManager");
-            return null;
-        }
-    }
+    // Cache reflected ConstructorInfo to avoid repeated Activator.CreateInstance type-resolution overhead.
+    // IL2CPP-friendly: uses ConstructorInfo.Invoke (always supported), no Expression.Compile.
+    // Key: mediator type, Value: cached ctor (string, GameObject, int, bool)
+    private static readonly Dictionary<Type, System.Reflection.ConstructorInfo> _mediatorCtorCache
+        = new Dictionary<Type, System.Reflection.ConstructorInfo>();
 
-    private static Type FindMediatorType(string uiName)
+    private static System.Reflection.ConstructorInfo GetMediatorCtor(Type type)
     {
-        // Convention: "UILogin" → "UILoginMediator"
-        string typeName = uiName + "Mediator";
-        foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-        {
-            var type = asm.GetType(typeName);
-            if (type != null && typeof(UIMediatorBase).IsAssignableFrom(type))
-                return type;
-        }
-        return null;
+        if (_mediatorCtorCache.TryGetValue(type, out var cached))
+            return cached;
+
+        var ctor = type.GetConstructor(new[] { typeof(string), typeof(GameObject), typeof(int), typeof(bool) });
+        if (ctor == null)
+            Log.e($"Mediator type {type.Name} missing required constructor (string,GameObject,int,bool)", "UIManager");
+        _mediatorCtorCache[type] = ctor;
+        return ctor;
     }
     #endregion
 
@@ -218,14 +202,16 @@ public class UIManager
     }
 
     /// <summary>
-    /// Create mediator via Activator, register with Facade, add to dictionary, optionally push stack, then Show.
+    /// Create mediator via cached ctor, register with Facade, add to dictionary, optionally push stack, then Show.
     /// </summary>
     private void TryCreateAndRegisterMediator<T>(string uiName, GameObject uiGo, EUILayer layer, bool isPushStack) where T : UIMediatorBase
     {
         T uiMediator = null;
         try
         {
-            uiMediator = (T)Activator.CreateInstance(typeof(T), uiName, uiGo, (int)layer, false);
+            var ctor = GetMediatorCtor(typeof(T));
+            if (ctor != null)
+                uiMediator = (T)ctor.Invoke(new object[] { uiName, uiGo, (int)layer, false });
         }
         catch (Exception e)
         {

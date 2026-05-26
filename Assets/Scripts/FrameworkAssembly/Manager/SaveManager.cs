@@ -1,10 +1,12 @@
 using System;
 using System.IO;
+using Newtonsoft.Json;
 using UnityEngine;
 
 /// <summary>
 /// Manages persistent data storage using JSON files.
 /// Files stored in Application.persistentDataPath/Saves/.
+/// Uses Newtonsoft.Json for full type support (Dictionary, nesting, etc.).
 /// </summary>
 public static class SaveManager
 {
@@ -30,7 +32,7 @@ public static class SaveManager
         try
         {
             string path = GetPath(key);
-            string json = JsonUtility.ToJson(data);
+            string json = JsonConvert.SerializeObject(data, Formatting.Indented);
             File.WriteAllText(path, json);
             Log.d($"Saved key: {key}", "SaveManager");
         }
@@ -54,7 +56,7 @@ public static class SaveManager
                 return new T();
             }
             string json = File.ReadAllText(path);
-            T data = JsonUtility.FromJson<T>(json);
+            T data = JsonConvert.DeserializeObject<T>(json);
             Log.d($"Loaded key: {key}", "SaveManager");
             return data;
         }
@@ -75,7 +77,7 @@ public static class SaveManager
             string path = GetPath(key);
             if (!File.Exists(path)) return;
             string json = File.ReadAllText(path);
-            JsonUtility.FromJsonOverwrite(json, target);
+            JsonConvert.PopulateObject(json, target);
             Log.d($"LoadInto key: {key}", "SaveManager");
         }
         catch (Exception e)
