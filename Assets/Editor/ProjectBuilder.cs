@@ -347,12 +347,17 @@ public class ProjectBuilder
             File.Copy(filePath, Path.Combine(streamingAssetsDir, fileName), true);
         }
 
-        // Copy manifest to StreamingAssets
+        // Copy manifest to StreamingAssets, but set version to "0.0.0"
+        // so client always sees server version as newer → triggers hot update flow.
         string srcManifest = Path.Combine(hotUpdateOutputDir, "manifest.json");
         string dstManifest = Path.Combine(streamingAssetsDir, "manifest.json");
         if (File.Exists(srcManifest))
         {
-            File.Copy(srcManifest, dstManifest, true);
+            string manifestJson = File.ReadAllText(srcManifest);
+            // Replace version with "0.0.0" so built-in manifest never matches server version
+            manifestJson = System.Text.RegularExpressions.Regex.Replace(manifestJson,
+                @"""version""\s*:\s*""[^""]+""", "\"version\": \"0.0.0\"");
+            File.WriteAllText(dstManifest, manifestJson);
         }
 
         // Copy encrypted Lua scripts to StreamingAssets for built-in Lua support
