@@ -128,6 +128,11 @@ public class HotUpdateManager
         {
             Log.d("All files are up to date", "HotUpdateManager");
             versionChecker.SaveVersion(manifest.version);
+            // Save manifest so AssetBundleManager can discover existing bundles after restart
+            SaveManifestToDisk();
+            // Also update the in-memory manifest so ReloadManifest picks up hotfix bundles
+            AssetBundleManager.Instance.SetManifest(versionChecker.RawManifest);
+            AssetBundleManager.Instance.ReloadManifest();
             SetState(HotUpdateState.Success, "All files up to date");
             yield break;
         }
