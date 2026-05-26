@@ -191,6 +191,10 @@ public class ProjectBuilder
         // without an explicit Assembly.Load first.
         CopyBaseDllToResources(target);
 
+        // Build hot update ABs + copy to StreamingAssets BEFORE BuildPlayer
+        // so they are included in the APK as built-in assets.
+        BuildHotUpdateForPlatform(target, version);
+
         // Always build Player (HybridCLR is optional for C# hot update)
         {
             // Collect scenes
@@ -214,9 +218,6 @@ public class ProjectBuilder
 
                 // Generate build_info.json
                 GenerateBuildInfo(outputDir, platformName, version, summary);
-
-                // Build hot update packages
-                BuildHotUpdateForPlatform(target, version);
 
                 // Show success dialog (only in Editor interactive mode)
                 if (!Application.isBatchMode)
