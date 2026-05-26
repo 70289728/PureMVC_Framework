@@ -339,15 +339,11 @@ public class ProjectBuilder
             Directory.CreateDirectory(streamingAssetsDir);
         }
 
-        // Copy only Base and Module bundles to StreamingAssets (not Hotfix)
+        // Copy all bundles to StreamingAssets for built-in fallback.
+        // Hotfix bundles included so first-time install has complete assets.
         foreach (string filePath in Directory.GetFiles(hotUpdateOutputDir, "*.ab", SearchOption.TopDirectoryOnly))
         {
             string fileName = Path.GetFileName(filePath);
-            // Skip hotfix bundles for built-in
-            if (fileName.StartsWith("hotfix_", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
             File.Copy(filePath, Path.Combine(streamingAssetsDir, fileName), true);
         }
 
