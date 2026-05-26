@@ -99,22 +99,25 @@ public class ClientHandler : IDisposable
                 if (BitConverter.IsLittleEndian) Array.Reverse(lengthBuffer);
                 int msgLength = BitConverter.ToInt32(lengthBuffer, 0);
 
-                // Anti-abuse: limit message body max 1MB, min 1 byte
-                if (msgLength <= 0 || msgLength > 1024 * 1024)
+                // Anti-abuse: limit message body max 1MB, reject negative length
+                if (msgLength < 0 || msgLength > 1024 * 1024)
                 {
-                    Console.WriteLine($"[ClientHandler] client {ClientId} invalid message length: {msgLength} (exceeds 1MB limit)");
+                    Console.WriteLine($"[ClientHandler] client {ClientId} invalid message length: {msgLength} (must be 0 ~ 1MB)");
                     Disconnect();
                     break;
                 }
 
-                // step3: read complete message body
-                var msgBuffer = new byte[msgLength];
-                int bodyRead = await ReadExactlyAsync(_stream, msgBuffer, 0, msgLength, _cancellationToken);
-                if (bodyRead < msgLength)
+                // step3: read complete message body (0-length = empty body, e.g. heartbeat)
+                var msgBuffer = msgLength > 0 ? new byte[msgLength] : Array.Empty<byte>();
+                if (msgLength > 0)
                 {
-                    Console.WriteLine($"[ClientHandler] client {ClientId} disconnected (message body read incomplete)");
-                    Disconnect();
-                    break;
+                    int bodyRead = await ReadExactlyAsync(_stream, msgBuffer, 0, msgLength, _cancellationToken);
+                    if (bodyRead < msgLength)
+                    {
+                        Console.WriteLine($"[ClientHandler] client {ClientId} disconnected (message body read incomplete)");
+                        Disconnect();
+                        break;
+                    }
                 }
 
                 // step4: parse and process message
