@@ -125,16 +125,21 @@ public class GameMain : MonoBehaviour
 
     void Start()
     {
+        // Init managers first — DialogManager available for error reporting
+        InitManagers();
+
         if (_hotAssembly == null)
         {
             Log.e("HotUpdateAssembly not loaded, cannot start", "GameMain");
+            DialogManager.Instance.ShowInfo("Fatal Error",
+                "Hot update assembly failed to load.\nPlease restart the application.",
+                () => Application.Quit());
             return;
         }
 
         // Resolve LoginSuccessCommand type from HotUpdateAssembly (the only command in hot-update assembly)
         _cmdLoginSuccess = _hotAssembly?.GetType("LoginSuccessCommand");
 
-        InitManagers();
         StartCoroutine(StartupFlow());
     }
 
