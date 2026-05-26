@@ -125,21 +125,16 @@ public class GameMain : MonoBehaviour
 
     void Start()
     {
-        // Init managers first — DialogManager available for error reporting
-        InitManagers();
-
         if (_hotAssembly == null)
         {
             Log.e("HotUpdateAssembly not loaded, cannot start", "GameMain");
-            DialogManager.Instance.ShowInfo("Fatal Error",
-                "Hot update assembly failed to load.\nPlease restart the application.",
-                () => Application.Quit());
             return;
         }
 
         // Resolve LoginSuccessCommand type from HotUpdateAssembly (the only command in hot-update assembly)
         _cmdLoginSuccess = _hotAssembly?.GetType("LoginSuccessCommand");
 
+        InitManagers();
         StartCoroutine(StartupFlow());
     }
 
@@ -212,9 +207,10 @@ public class GameMain : MonoBehaviour
     {
         Log.d("Starting hot update check...", "GameMain");
 
-        // Init, GameStart sends STARTUP → StartupMacroCommand → HotUpdateCommand
+        // Init, GameStart sends STARTUP → HotUpdateCommand → check → UI or success
         InitModule();
         GameStart();  // This sends STARTUP → StartupMacroCommand → HotUpdateCommand
+        ConnectServer();
 
         // Editor: skip wait (AssetDatabase provides assets directly)
 #if !UNITY_EDITOR
@@ -237,9 +233,6 @@ public class GameMain : MonoBehaviour
         // Reload red dot tree if hot update delivered a new RedDotTree.json
         RedDotManager.Instance.ReloadTree();
 #endif
-
-        // Connect to server AFTER hot update completes — avoids idle TCP while downloading
-        ConnectServer();
 
         // Open login only if no restart is needed
         if (!HotUpdateManager.Instance.NeedRestart)
@@ -297,11 +290,14 @@ public class GameMain : MonoBehaviour
         var hotStartupCmdType = _hotAssembly?.GetType("HotUpdateStartupMacroCommand");
         if (hotStartupCmdType != null)
         {
-            var hotStartupCmd = Activator.CreateInstance(hotStartupCmdType) as IHotUpdateStartup;
-            if (hotStartupCmd != null)
+            var hotStartupCmd = Activator.CreateInstance(hotStartupCmdType);
+            var executeMethod = hotStartupCmdType.GetMethod("Execute", BindingFlags.Public | BindingFlags.Instance);
+            if (executeMethod != null)
             {
-                var notif = new PureMVC.Patterns.Observer.Notification("HOT_UPDATE_STARTUP", null, null);
-                hotStartupCmd.Execute(notif);
+                var notifConstructor = typeof(PureMVC.Patterns.Observer.Notification)
+                    .GetConstructor(new[] { typeof(string), typeof(object), typeof(string) });
+                var notif = notifConstructor?.Invoke(new object[] { "HOT_UPDATE_STARTUP", null, null });
+                executeMethod.Invoke(hotStartupCmd, new[] { notif });
                 Log.d("HotUpdateStartupMacroCommand executed", "GameMain");
             }
         }
@@ -311,8 +307,7 @@ public class GameMain : MonoBehaviour
 
     void ConnectServer()
     {
-        // Use game server IP from HotUpdateConfig — allows per-build config without code change.
-        // Falls back to inspector value if HotUpdateManager is not initialized.
+        // Use game server IP from HotUpdateConfig — allows per-build config without code change
         var hotCfg = HotUpdateManager.Instance?.Config;
         if (hotCfg != null)
         {
