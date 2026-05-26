@@ -103,7 +103,7 @@ public class UILoginMediator : UIMediatorBase
     #region UI Events
     private void OnLoginBtnClick()
     {
-        string account = accountInput != null ? accountInput.text : string.Empty;
+        string account = accountInput != null ? accountInput.text.Trim() : string.Empty;
         string password = passwordInput != null ? passwordInput.text : string.Empty;
         if (string.IsNullOrEmpty(account))
         {
@@ -115,9 +115,19 @@ public class UILoginMediator : UIMediatorBase
             SendNotification(NotificationConst.SHOW_TIP, "Password cannot be empty.");
             return;
         }
-        if (!int.TryParse(account, out int accountId))
+        if (!long.TryParse(account, out long accountId))
         {
             SendNotification(NotificationConst.SHOW_TIP, "Account must be a number.");
+            return;
+        }
+        if (accountId <= 0)
+        {
+            SendNotification(NotificationConst.SHOW_TIP, "Account must be a positive number.");
+            return;
+        }
+        if (password.Length > 32)
+        {
+            SendNotification(NotificationConst.SHOW_TIP, "Password cannot exceed 32 characters.");
             return;
         }
         SetButtonsInteractable(false);
@@ -127,7 +137,7 @@ public class UILoginMediator : UIMediatorBase
 
     private void OnRegisterBtnClick()
     {
-        string accountText = accountInput != null ? accountInput.text : string.Empty;
+        string accountText = accountInput != null ? accountInput.text.Trim() : string.Empty;
         string password = passwordInput != null ? passwordInput.text : string.Empty;
         if (string.IsNullOrEmpty(accountText))
         {
@@ -139,9 +149,24 @@ public class UILoginMediator : UIMediatorBase
             SendNotification(NotificationConst.SHOW_TIP, "Password cannot be empty.");
             return;
         }
-        if (!int.TryParse(accountText, out int accountId))
+        if (!long.TryParse(accountText, out long accountId))
         {
             SendNotification(NotificationConst.SHOW_TIP, "Account must be a number.");
+            return;
+        }
+        if (accountId <= 0)
+        {
+            SendNotification(NotificationConst.SHOW_TIP, "Account must be a positive number.");
+            return;
+        }
+        if (password.Length < 4)
+        {
+            SendNotification(NotificationConst.SHOW_TIP, "Password must be at least 4 characters.");
+            return;
+        }
+        if (password.Length > 32)
+        {
+            SendNotification(NotificationConst.SHOW_TIP, "Password cannot exceed 32 characters.");
             return;
         }
         SetButtonsInteractable(false);

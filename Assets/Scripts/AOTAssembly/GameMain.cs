@@ -38,6 +38,12 @@ public class GameMain : MonoBehaviour
     public static GameMain Instance { get; private set; }
 
     /// <summary>
+    /// Must match HotUpdateConfig.localHotUpdateDir default. Three GameMain references use this constant.
+    /// If HotUpdateConfig.localHotUpdateDir is changed to a different value, a warning is logged at startup.
+    /// </summary>
+    private const string DEFAULT_HOT_UPDATE_DIR = "HotUpdate";
+
+    /// <summary>
     /// The currently active HotUpdateAssembly. Loaded once at startup from
     /// persistentCache > Resources, then optionally replaced by ApplyHotUpdate.
     /// Only used for types that remain in HotUpdateAssembly.
@@ -86,11 +92,8 @@ public class GameMain : MonoBehaviour
         return;
 #else
         // Runtime: priority chain — persistent cache > AOT-embedded
-        // IMPORTANT: This path MUST stay in sync with HotUpdateConfig.localHotUpdateDir.
-        // Awake runs before HotUpdateManager.Initialize, so we cannot read Config here.
-        // If you change localHotUpdateDir in HotUpdateConfig, also update this string and
-        // the matching one in ApplyHotUpdate() below — otherwise hot-update DLL won't be found on next cold start.
-        string cacheDir = Path.Combine(Application.persistentDataPath, "HotUpdate", "cache");
+        // Uses DEFAULT_HOT_UPDATE_DIR constant; must match HotUpdateConfig.localHotUpdateDir.
+        string cacheDir = Path.Combine(Application.persistentDataPath, DEFAULT_HOT_UPDATE_DIR, "cache");
         string cachePath = Path.Combine(cacheDir, "HotUpdateAssembly.dll");
 
         if (File.Exists(cachePath))
@@ -159,10 +162,8 @@ public class GameMain : MonoBehaviour
             return;
         }
 
-        // IMPORTANT: This path MUST match the cacheDir in ResolveHotAssembly() (Awake-time read of the same DLL).
-        // See the warning comment there. Do not switch to HotUpdateManager.Config.localHotUpdateDir without
-        // also updating ResolveHotAssembly — otherwise next cold start will not find the cached DLL.
-        string cacheDir = Path.Combine(Application.persistentDataPath, "HotUpdate", "cache");
+        // Must match DEFAULT_HOT_UPDATE_DIR used in ResolveHotAssembly.
+        string cacheDir = Path.Combine(Application.persistentDataPath, DEFAULT_HOT_UPDATE_DIR, "cache");
         string cachePath = Path.Combine(cacheDir, "HotUpdateAssembly.dll");
         try
         {
@@ -221,16 +222,26 @@ public class GameMain : MonoBehaviour
 
         // Step 0: AssetBundleManager async init (skip in Editor — uses AssetDatabase directly).
         // Single coroutine entry; internal platform branching uses File API on PC/iOS, UnityWebRequest on Android.
-        // Hardcoded "HotUpdate" matches HotUpdateConfig.localHotUpdateDir default — keep all three GameMain
-        // references in lock-step. See ResolveHotAssembly warning.
+        // Uses DEFAULT_HOT_UPDATE_DIR constant; must match HotUpdateConfig.localHotUpdateDir.
 #if !UNITY_EDITOR
-        yield return AssetBundleManager.Instance.InitializeCoroutine("HotUpdate");
+        yield return AssetBundleManager.Instance.InitializeCoroutine(DEFAULT_HOT_UPDATE_DIR);
 #endif
 
         // Init, GameStart sends STARTUP → HotUpdateCommand → check → UI or success
         InitModule();
         GameStart();  // This sends STARTUP → StartupMacroCommand → HotUpdateCommand
         ConnectServer();
+
+        // Validate HotUpdateConfig.localHotUpdateDir matches DEFAULT_HOT_UPDATE_DIR.
+        // If mismatched, the Awake-time cacheDir would have used the wrong path and the
+        // hot-update DLL won't be found on next cold start.
+        if (HotUpdateManager.Instance.Config != null &&
+            HotUpdateManager.Instance.Config.localHotUpdateDir != DEFAULT_HOT_UPDATE_DIR)
+        {
+            Log.w($"HotUpdateConfig.localHotUpdateDir '{HotUpdateManager.Instance.Config.localHotUpdateDir}' " +
+                  $"differs from GameMain.DEFAULT_HOT_UPDATE_DIR '{DEFAULT_HOT_UPDATE_DIR}'. " +
+                  $"Cold-start DLL loading will fail. Update HotUpdateConfig to match.", "GameMain");
+        }
 
         // Wait for hot update state machine to settle to a "done" state before opening Login.
         // States: 0=Idle 1=Checking 2=UpdateAvailable 3=Downloading 4=Verifying 5=Applying 6=Success 7=Failed

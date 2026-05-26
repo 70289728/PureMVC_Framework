@@ -14,7 +14,7 @@ public static class NetworkMessageHelper
     /// <summary>
     /// Send a login request to the server.
     /// </summary>
-    public static void SendLogin(int accountId, string password)
+    public static void SendLogin(long accountId, string password)
     {
         var msg = new LoginMessageC2S
         {
@@ -31,7 +31,7 @@ public static class NetworkMessageHelper
     /// <summary>
     /// Send a register request to the server.
     /// </summary>
-    public static void SendRegister(int accountId, string password)
+    public static void SendRegister(long accountId, string password)
     {
         var msg = new RegisterC2S
         {

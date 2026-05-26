@@ -17,6 +17,6 @@ public class RegisterCommand : CommandBase
 
 public class RegisterBody
 {
-    public int AccountId;
+    public long AccountId;
     public string Password;
 }

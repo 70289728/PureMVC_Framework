@@ -546,6 +546,8 @@ public class NetworkManager : MonoBehaviour
     private void HandleHeartbeat()
     {
         if (!enableHeartbeat || !IsConnected) return;
+        // Do not send heartbeat before login — CurrentAccountId is 0 until UserProxy sets it on login success.
+        if (CurrentAccountId == 0) return;
 
         heartbeatTimer += Time.deltaTime;
         if (heartbeatTimer >= heartbeatInterval)

@@ -70,7 +70,11 @@ public static class ConfigManager
             List<T> luaData = LuaConfigLoader.LoadConfig<T>();
             if (luaData != null && luaData.Count > 0)
             {
-                lock (_cacheLock) { configCache[type] = luaData; }
+                lock (_cacheLock)
+                {
+                    if (!configCache.ContainsKey(type))
+                        configCache[type] = luaData;
+                }
                 Log.d($"Loaded config via Lua: {type.Name} ({luaData.Count} items)", "ConfigManager");
                 return;
             }
@@ -80,7 +84,11 @@ public static class ConfigManager
         List<T> items = LoadFromAssetBundle<T>();
         if (items != null)
         {
-            lock (_cacheLock) { configCache[type] = items; }
+            lock (_cacheLock)
+            {
+                if (!configCache.ContainsKey(type))
+                    configCache[type] = items;
+            }
             Log.d($"Loaded config via AssetBundle: {type.Name} ({items.Count} items)", "ConfigManager");
             return;
         }
@@ -90,7 +98,11 @@ public static class ConfigManager
         items = LoadFromAssetDatabase<T>();
         if (items != null)
         {
-            lock (_cacheLock) { configCache[type] = items; }
+            lock (_cacheLock)
+            {
+                if (!configCache.ContainsKey(type))
+                    configCache[type] = items;
+            }
             Log.d($"Loaded config via AssetDatabase: {type.Name} ({items.Count} items)", "ConfigManager");
             return;
         }
@@ -145,13 +157,12 @@ public static class ConfigManager
 
     /// <summary>
     /// Load config from AssetBundle via AssetBundleManager.
+    /// AssetBundleManager.Instance is a non-null singleton; LoadAsset handles the not-initialized case internally.
     /// </summary>
     private static List<T> LoadFromAssetBundle<T>() where T : class
     {
         try
         {
-            if (AssetBundleManager.Instance == null) return null;
-
             string assetName = typeof(T).Name;
             TextAsset textAsset = AssetBundleManager.Instance.LoadAsset<TextAsset>(CONFIG_BUNDLE_NAME, assetName);
             if (textAsset == null) return null;
@@ -197,7 +208,7 @@ public static class ConfigManager
         try
         {
             ConfigWrapper<T> wrapper = JsonUtility.FromJson<ConfigWrapper<T>>(json);
-            configCache[typeof(T)] = wrapper.items;
+            lock (_cacheLock) { configCache[typeof(T)] = wrapper.items; }
             Log.d($"Parsed config: {typeof(T).Name} ({wrapper.items.Count} items)", "ConfigManager");
         }
         catch (Exception e)

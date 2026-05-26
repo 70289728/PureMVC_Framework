@@ -143,6 +143,7 @@ public class ClientHandler : IDisposable
     }
 
     // Fix7: heartbeat timeout detection，periodic checkwhetherexceeds HeartbeatTimeout no heartbeat received
+    // Skip timeout check when AccountId == 0 (client not yet logged in).
     private async Task HeartbeatTimeoutCheckAsync(CancellationToken cancellationToken)
     {
         try
@@ -150,6 +151,7 @@ public class ClientHandler : IDisposable
             while (!cancellationToken.IsCancellationRequested && IsConnected)
             {
                 await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
+                if (AccountId == 0) continue; // not logged in yet, skip timeout check
                 if (DateTime.UtcNow - _lastHeartbeatTime > HeartbeatTimeout)
                 {
                     Console.WriteLine($"[ClientHandler] client {ClientId} heartbeat timeout (> {HeartbeatTimeout.TotalSeconds}s), force disconnect");

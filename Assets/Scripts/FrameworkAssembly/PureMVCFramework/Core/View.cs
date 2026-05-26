@@ -118,34 +118,31 @@ namespace PureMVC.Core
         ///         list are notified and are passed a reference to the <c>INotification</c> in
         ///         the order in which they were registered.
         ///     </para>
+        ///     <para>
+        ///         Iterates under _observerLock to avoid per-call list snapshot allocation.
+        ///         Observers that call RegisterObserver/RemoveObserver during HandleNotification
+        ///         will deadlock — this is a design contract violation and should never happen.
+        ///     </para>
         /// </remarks>
         /// <param name="notification"></param>
         public virtual void NotifyObservers(INotification notification)
         {
-            // Snapshot the observers list under _observerLock so we don't read it
-            // while another thread is mutating it via Add/RemoveAt — would otherwise
-            // throw InvalidOperationException on resize race.
-            List<IObserver> snapshot = null;
-            if (observerMap.TryGetValue(notification.Name, out var observersRef))
-            {
-                lock (_observerLock)
-                {
-                    snapshot = new List<IObserver>(observersRef);
-                }
-            }
-            if (snapshot == null) return;
+            if (!observerMap.TryGetValue(notification.Name, out var observersRef)) return;
 
-            // Notify Observers from the working array (lock-free).
+            // Iterate under lock — zero allocation (no snapshot copy).
             // Wrap each observer in try-catch so one crashing observer doesn't break others.
-            foreach (var observer in snapshot)
+            lock (_observerLock)
             {
-                try
+                foreach (var observer in observersRef)
                 {
-                    observer.NotifyObserver(notification);
-                }
-                catch (Exception ex)
-                {
-                    Log.e($"Observer [{observer.GetType().Name}] threw on notification [{notification.Name}]: {ex}", "View");
+                    try
+                    {
+                        observer.NotifyObserver(notification);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.e($"Observer [{observer.GetType().Name}] threw on notification [{notification.Name}]: {ex}", "View");
+                    }
                 }
             }
         }

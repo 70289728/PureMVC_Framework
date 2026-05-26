@@ -17,6 +17,6 @@ public class LoginCommand : CommandBase
 
 public class LoginBody
 {
-    public int AccountId;
+    public long AccountId;
     public string Password;
 }

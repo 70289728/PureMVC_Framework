@@ -14,13 +14,18 @@ public class HotUpdateManager
 {
     #region Singleton
     private static HotUpdateManager instance;
+    private static readonly object _instanceLock = new object();
     public static HotUpdateManager Instance
     {
         get
         {
             if (instance == null)
             {
-                instance = new HotUpdateManager();
+                lock (_instanceLock)
+                {
+                    if (instance == null)
+                        instance = new HotUpdateManager();
+                }
             }
             return instance;
         }
