@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2021 RenderHeads Ltd.  All rights reserved.
+// Copyright 2015-2022 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo
@@ -20,6 +20,7 @@ namespace RenderHeads.Media.AVProVideo
 				//Texture2D,
 			}
 
+			[SerializeField] public string name = string.Empty;
 			[SerializeField] public SourceType sourceType = SourceType.AVProVideoPlayer;
 			[SerializeField] public MediaPath mediaPath = new MediaPath();
 			[SerializeField] public Texture2D texture = null;
@@ -47,7 +48,7 @@ namespace RenderHeads.Media.AVProVideo
 	/// This is a BETA component
 	/// </summary>
 	[AddComponentMenu("AVPro Video/Playlist Media Player (BETA)", -80)]
-	[HelpURL("http://renderheads.com/products/avpro-video/")]
+	[HelpURL("https://www.renderheads.com/products/avpro-video/")]
 	public class PlaylistMediaPlayer : MediaPlayer, ITextureProducer
 	{
 		public enum Transition
@@ -189,11 +190,17 @@ namespace RenderHeads.Media.AVProVideo
 		/// </summary>
 		public bool AutoProgress { get { return _playlistAutoProgress; } set { _playlistAutoProgress = value; } }
 
+		/// <summary>
+		/// Returns the IMediaInfo interface for the MediaPlayer that is playing the current active item in the playlist (returned by CurrentPlayer property).  This will change during each transition.
+		/// </summary>
 		public override IMediaInfo Info
 		{
 			get { if (CurrentPlayer != null) return CurrentPlayer.Info; return null; }
 		}
 
+		/// <summary>
+		/// Returns the IMediaControl interface for the MediaPlayer that is playing the current active item in the playlist (returned by CurrentPlayer property).  This will change during each transition.
+		/// </summary>
 		public override IMediaControl Control
 		{
 			get { if (CurrentPlayer != null) return CurrentPlayer.Control; return null; }
@@ -223,7 +230,7 @@ namespace RenderHeads.Media.AVProVideo
 		[SerializeField] bool _playlistAudioMuted = false;
 
 		public override float AudioVolume
-		{ 
+		{
 			get { return _playlistAudioVolume; }
 			set { _playlistAudioVolume = Mathf.Clamp01(value); if (!IsTransitioning() && CurrentPlayer != null) CurrentPlayer.AudioVolume = _playlistAudioVolume; }
 		}
@@ -243,7 +250,7 @@ namespace RenderHeads.Media.AVProVideo
 			}
 			if (IsTransitioning())
 			{
-				if (NextPlayer.Control != null)
+				if (!_pausePreviousOnTransition && NextPlayer.Control != null)
 				{
 					NextPlayer.Control.Play();
 				}
@@ -317,6 +324,10 @@ namespace RenderHeads.Media.AVProVideo
 				{
 					// Immediately complete the transition
 					_transitionTimer = _currentTransitionDuration;
+
+					// Immediately update the audio volume
+					NextPlayer.AudioVolume = this.AudioVolume;
+					CurrentPlayer.AudioVolume = 0f;
 
 					if (_autoCloseVideo)
 					{
@@ -683,6 +694,11 @@ namespace RenderHeads.Media.AVProVideo
 			return CurrentPlayer.TextureProducer.GetTextureTimeStamp();
 		}
 
+		public float GetTexturePixelAspectRatio()
+		{
+			return CurrentPlayer.TextureProducer.GetTexturePixelAspectRatio();
+		}
+
 		public bool RequiresVerticalFlip()
 		{
 			return CurrentPlayer.TextureProducer.RequiresVerticalFlip();
@@ -707,6 +723,22 @@ namespace RenderHeads.Media.AVProVideo
 		{
 			return CurrentPlayer.TextureProducer.GetTextureAlphaPacking();
 		}
+
+		public float[] GetAffineTransform()
+		{
+			return CurrentPlayer.TextureProducer.GetAffineTransform();
+		}
+
+		public Matrix4x4 GetTextureMatrix()
+		{
+			return CurrentPlayer.TextureProducer.GetTextureMatrix();
+		}
+
+		public RenderTextureFormat GetCompatibleRenderTextureFormat(ITextureProducer.GetCompatibleRenderTextureFormatOptions options, int plane)
+		{
+			return CurrentPlayer.TextureProducer.GetCompatibleRenderTextureFormat(options, plane);
+		}
+
 #endregion Implementing ITextureProducer
 
 		private static string GetTransitionName(Transition transition)

@@ -212,7 +212,7 @@ namespace RenderHeads.Media.AVProVideo
 
 				m_iPlayerIndex = m_Video.Call<int>("GetPlayerIndex");
 				Helper.LogInfo("Creating player " + m_iPlayerIndex);
-				SetOptions(options.useFastOesPath, options.showPosterFrame);
+				            SetOptions(options.useFastOesPath, false); // showPosterFrame removed in AVPro 3.0.1
 
 				// Initialise renderer, on the render thread
 				AndroidMediaPlayer.IssuePluginEvent(Native.AVPPluginEvent.PlayerSetup, m_iPlayerIndex);

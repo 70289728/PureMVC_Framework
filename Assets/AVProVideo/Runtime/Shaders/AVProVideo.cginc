@@ -2,10 +2,13 @@
 // Copyright 2015-2021 RenderHeads Ltd.  All rights reserverd.
 //-----------------------------------------------------------------------------
 
+
 //#define AVPRO_CHEAP_GAMMA_CONVERSION
 
 #if defined (SHADERLAB_GLSL)
+	#define AVPRO_CHEAP_GAMMA_CONVERSION
 	#define INLINE
+	#define FIXED float
 	#define HALF float
 	#define HALF2 vec2
 	#define HALF3 vec3
@@ -19,6 +22,7 @@
 	#define LERP mix
 #else
 	#define INLINE inline
+	#define FIXED fixed
 	#define HALF half
 	#define HALF2 half2
 	#define HALF3 half3
@@ -35,6 +39,8 @@
 // Specify this so Unity doesn't automatically update our shaders.
 #define UNITY_SHADER_NO_UPGRADE 1
 
+//#pragma multi_compile __ XR_USE_BUILT_IN_EYE_VARIABLE
+
 // We use this method so that when Unity automatically updates the shader from the old
 // mul(UNITY_MATRIX_MVP.. to UnityObjectToClipPos that it only changes in one place.
 INLINE FLOAT4 XFormObjectToClip(FLOAT4 vertex)
@@ -46,8 +52,8 @@ INLINE FLOAT4 XFormObjectToClip(FLOAT4 vertex)
 #endif
 }
 
-uniform FLOAT4X4 _ViewMatrix;
-uniform FLOAT3 _CameraPosition;
+uniform FLOAT3 _WorldCameraPosition;
+uniform FLOAT3 _WorldCameraRight;
 
 INLINE bool IsStereoEyeLeft()
 {
@@ -55,27 +61,27 @@ INLINE bool IsStereoEyeLeft()
 	return true;
 #elif defined(FORCEEYE_RIGHT)
 	return false;
-#elif defined(UNITY_SINGLE_PASS_STEREO) || defined (UNITY_STEREO_INSTANCING_ENABLED)
+//#elif defined(USING_STEREO_MATRICES) || defined(XR_USE_BUILT_IN_EYE_VARIABLE)
+#elif defined(USING_STEREO_MATRICES)
 	// Unity 5.4 has this new variable
 	return (unity_StereoEyeIndex == 0);
 #elif defined (UNITY_DECLARE_MULTIVIEW)
 	// OVR_multiview extension
 	return (UNITY_VIEWID == 0);
 #else
-	// worldNosePosition is the camera positon passed in from Unity via script
-	// We need to determine whether _WorldSpaceCameraPos (Unity shader variable) is to the left or to the right of _CameraPosition
-
-	FLOAT3 worldNosePosition = _CameraPosition;
-
-#if defined (SHADERLAB_GLSL)
-	FLOAT3 worldCameraRight = _ViewMatrix[0].xyz;
-#else
-	FLOAT3 worldCameraRight = UNITY_MATRIX_V[0].xyz;
-#endif
-
-	float dRight = distance(worldNosePosition + worldCameraRight, _WorldSpaceCameraPos);
-	float dLeft = distance(worldNosePosition - worldCameraRight, _WorldSpaceCameraPos);
-	return (dRight > dLeft);
+	#if defined(SHADERLAB_GLSL) && defined(USING_URP)
+		// NOTE: Bug #1416: URP + OES
+		FLOAT3 renderCameraPos = FLOAT3( gl_ModelViewMatrixInverseTranspose[0][3], gl_ModelViewMatrixInverseTranspose[1][3], gl_ModelViewMatrixInverseTranspose[2][3] );
+	#elif defined(UNITY_MATRIX_I_V)
+		// NOTE: Bug #1165: _WorldSpaceCameraPos is not correct in multipass VR (when skybox is used) but UNITY_MATRIX_I_V seems to be
+		FLOAT3 renderCameraPos = UNITY_MATRIX_I_V._m03_m13_m23;
+	#else
+		FLOAT3 renderCameraPos = _WorldSpaceCameraPos.xyz;
+	#endif
+	
+	float fL = distance(_WorldCameraPosition - _WorldCameraRight, renderCameraPos);
+	float fR = distance(_WorldCameraPosition + _WorldCameraRight, renderCameraPos);
+	return (fL < fR);
 #endif
 }
 
@@ -346,9 +352,17 @@ INLINE FLOAT3 ConvertYpCbCrToRGB(FLOAT3 YpCbCr, FLOAT4X4 YpCbCrTransform)
 #endif
 }
 
+#if defined(SHADERLAB_GLSL)
+	#if __VERSION__ < 300
+		#define TEX_EXTERNAL(sampler, uv) texture2D(sampler, uv.xy);
+	#else
+		#define TEX_EXTERNAL(sampler, uv) texture(sampler, uv.xy)
+	#endif
+#endif
+
 INLINE HALF4 SampleRGBA(sampler2D tex, FLOAT2 uv)
 {
-#if defined(SHADERLAB_GLSL)		// GLSL doesn't support tex2D, so just return for now
+#if defined(SHADERLAB_GLSL)		// GLSL doesn't support tex2D, and Adreno GPU doesn't support passing sampler as a parameter, so just return if this is called
 	return HALF4(1.0, 1.0, 0.0, 1.0);
 #else
 	HALF4 rgba = tex2D(tex, uv);
@@ -361,7 +375,7 @@ INLINE HALF4 SampleRGBA(sampler2D tex, FLOAT2 uv)
 
 INLINE HALF4 SampleYpCbCr(sampler2D luma, sampler2D chroma, FLOAT2 uv, FLOAT4X4 YpCbCrTransform)
 {
-#if defined(SHADERLAB_GLSL)		// GLSL doesn't support tex2D, so just return for now
+#if defined(SHADERLAB_GLSL)		// GLSL doesn't support tex2D, and Adreno GPU doesn't support passing sampler as a parameter, so just return if this is called
 	return HALF4(1.0, 1.0, 0.0, 1.0);
 #else
 #if defined(SHADER_API_METAL) || defined(SHADER_API_GLES) || defined(SHADER_API_GLES3)
@@ -379,8 +393,8 @@ INLINE HALF4 SampleYpCbCr(sampler2D luma, sampler2D chroma, FLOAT2 uv, FLOAT4X4 
 
 INLINE HALF SamplePackedAlpha(sampler2D tex, FLOAT2 uv)
 {
-#if defined(SHADERLAB_GLSL)	// GLSL doesn't support tex2D, so just return for now
-	return 0.5;
+#if defined(SHADERLAB_GLSL)		// GLSL doesn't support tex2D, and Adreno GPU doesn't support passing sampler as a parameter, so just return if this is called
+	return 0.0;
 #else
 	HALF alpha;
 #if defined(USE_YPCBCR)
@@ -415,8 +429,13 @@ INLINE HALF3 ApplyHSBEffect(HALF3 color, FIXED4 hsbc)
 
 	HALF3 result = color;
 	result.rgb = ApplyHue(result, hue);
-	result.rgb = (result - 0.5f) * contrast + 0.5f + brightness;
+	result.rgb = (result - 0.5) * contrast + 0.5 + brightness;
+
+	#if defined(SHADERLAB_GLSL)
+	result.rgb = LERP(vec3(Luminance(result)), result, saturation);
+	#else
 	result.rgb = LERP(Luminance(result), result, saturation);
+	#endif
 	
 	return result;
 }

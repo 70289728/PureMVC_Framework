@@ -24,6 +24,7 @@ using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 #endif
 using System.Collections.Generic;
+using System.IO;
 
 //-----------------------------------------------------------------------------
 // Copyright 2015-2021 RenderHeads Ltd.  All rights reserved.
@@ -181,17 +182,93 @@ namespace RenderHeads.Media.AVProVideo.Editor
 			AddPlugins_UWP();
 		}
 
-		public int callbackOrder { get { return 0; } }
+        private class SFileToDelete
+        {
+            public SFileToDelete(string fn)
+            {
+                filename = fn;
+                fullPath = "";
+                found = false;
+            }
+
+            public string filename;
+            public string fullPath;
+            public bool found;
+        };
+
+        private static void RemoveLegacyPluginFiles()
+        {
+            List<SFileToDelete> aFilesToDelete = new List<SFileToDelete>();
+
+#if (UNITY_EDITOR && UNITY_ANDROID)
+            aFilesToDelete.Add( new SFileToDelete( "Android/guava-27.1-android.jar" ) );
+			aFilesToDelete.Add( new SFileToDelete( "Android/libs/arm64-v8a/libc++_shared.so" ) );
+			aFilesToDelete.Add( new SFileToDelete( "Android/libs/armeabi-v7a/libc++_shared.so" ) );
+			aFilesToDelete.Add( new SFileToDelete( "Android/libs/x86/libc++_shared.so" ) );
+			aFilesToDelete.Add( new SFileToDelete( "Android/libs/x86_64/libc++_shared.so" ) );
+#endif
+
+			if( aFilesToDelete.Count > 0 )
+            {
+                int iNumFoundFilesToDelete = 0;
+                string aFilesToDeleteString = "";
+
+                PluginImporter[] importers = PluginImporter.GetAllImporters();
+                foreach (PluginImporter pi in importers)
+                {
+                    foreach( SFileToDelete fileToDelete in aFilesToDelete )
+                    {
+                        string pluginFilename = pi.assetPath;
+                        pluginFilename.Replace("\\", "/");
+                        if( pluginFilename.Contains( fileToDelete.filename ) )
+                        {
+                            fileToDelete.fullPath = pi.assetPath;
+                            fileToDelete.found = true;
+
+                            if( iNumFoundFilesToDelete > 0 )
+                            {
+                                aFilesToDeleteString += "\n";
+                            }
+                            aFilesToDeleteString += pi.assetPath;
+                            ++iNumFoundFilesToDelete;
+                        }
+                    }
+                }
+
+                if( iNumFoundFilesToDelete > 0 )
+                {
+                    string message = ( iNumFoundFilesToDelete == 1 ) ? "A legacy AVPro Video plugin file has been found that requires deleting in order to build." : "Legacy AVPro Video plugin files have been found that require deleting in order to build.";
+                    Debug.Log("[AVProVideo] " + message + " Files: " + aFilesToDeleteString );
+                    if ( EditorUtility.DisplayDialog( "AVPro Video Legacy File", message + "\n\nDelete the following files?\n\n" + aFilesToDeleteString, "Delete", "Ignore" ) )
+                    {
+                        foreach( SFileToDelete fileToDelete in aFilesToDelete )
+                        {
+                            bool bDeleted = AssetDatabase.DeleteAsset( fileToDelete.fullPath );
+                            if( bDeleted )
+                            {
+                                Debug.Log( "[AVProVideo] Deleting " + fileToDelete.fullPath );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public int callbackOrder { get { return 0; } }
 
 #if AVPROVIDEO_UNITY_BUILDWITHREPORT_SUPPORT
 		public void OnPreprocessBuild(BuildReport report)
 		{
-			BuildPluginFileList();
+            RemoveLegacyPluginFiles();
+
+            BuildPluginFileList();
 			CheckNativePlugins(report.summary.platform);
 		}
 #else
 		public void OnPreprocessBuild(BuildTarget target, string path)
 		{
+            RemoveLegacyPluginFiles();
+
 			BuildPluginFileList();
 			CheckNativePlugins(target);
 		}

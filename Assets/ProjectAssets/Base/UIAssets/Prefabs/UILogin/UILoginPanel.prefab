@@ -79,6 +79,85 @@ MonoBehaviour:
     m_VerticalOverflow: 0
     m_LineSpacing: 1
   m_Text: Enter text...
+--- !u!1 &399047736119130459
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6927991034546860168}
+  - component: {fileID: 368843505671951343}
+  - component: {fileID: 2088551297337340081}
+  m_Layer: 5
+  m_Name: Text (Legacy)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &6927991034546860168
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 399047736119130459}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7203187912906689409}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &368843505671951343
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 399047736119130459}
+  m_CullTransparentMesh: 1
+--- !u!114 &2088551297337340081
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 399047736119130459}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_FontData:
+    m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
+    m_FontSize: 36
+    m_FontStyle: 0
+    m_BestFit: 0
+    m_MinSize: 10
+    m_MaxSize: 40
+    m_Alignment: 4
+    m_AlignByGeometry: 0
+    m_RichText: 1
+    m_HorizontalOverflow: 0
+    m_VerticalOverflow: 0
+    m_LineSpacing: 1
+  m_Text: "\u5207\u6362"
 --- !u!1 &712087403099565592
 GameObject:
   m_ObjectHideFlags: 0
@@ -294,6 +373,142 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bindKey: Button_LoginBtn
   component: {fileID: 4519165666577631549}
+--- !u!1 &1787907170119487653
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7203187912906689409}
+  - component: {fileID: 8680762335756237128}
+  - component: {fileID: 6889674074258718368}
+  - component: {fileID: 8948731232760278035}
+  - component: {fileID: 8711362886569215585}
+  m_Layer: 5
+  m_Name: SwitchBtn
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &7203187912906689409
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787907170119487653}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6927991034546860168}
+  m_Father: {fileID: 4517465534039604047}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 635, y: -346}
+  m_SizeDelta: {x: 160, y: 50}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &8680762335756237128
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787907170119487653}
+  m_CullTransparentMesh: 1
+--- !u!114 &6889674074258718368
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787907170119487653}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!114 &8948731232760278035
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787907170119487653}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Navigation:
+    m_Mode: 3
+    m_WrapAround: 0
+    m_SelectOnUp: {fileID: 0}
+    m_SelectOnDown: {fileID: 0}
+    m_SelectOnLeft: {fileID: 0}
+    m_SelectOnRight: {fileID: 0}
+  m_Transition: 1
+  m_Colors:
+    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
+    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_ColorMultiplier: 1
+    m_FadeDuration: 0.1
+  m_SpriteState:
+    m_HighlightedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
+    m_DisabledSprite: {fileID: 0}
+  m_AnimationTriggers:
+    m_NormalTrigger: Normal
+    m_HighlightedTrigger: Highlighted
+    m_PressedTrigger: Pressed
+    m_SelectedTrigger: Selected
+    m_DisabledTrigger: Disabled
+  m_Interactable: 1
+  m_TargetGraphic: {fileID: 6889674074258718368}
+  m_OnClick:
+    m_PersistentCalls:
+      m_Calls: []
+--- !u!114 &8711362886569215585
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787907170119487653}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306fb4003cf56cd418f776a4c0f5ef27, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  bindKey: Button_LoginBtn
+  component: {fileID: 8948731232760278035}
 --- !u!1 &2281485880089104834
 GameObject:
   m_ObjectHideFlags: 0
@@ -355,7 +570,7 @@ MonoBehaviour:
     stereoPacking: 0
   _autoOpen: 1
   _autoPlayOnStart: 0
-  _loop: 0
+  _loop: 1
   _audioVolume: 1
   _audioBalance: 0
   _audioMuted: 0
@@ -367,16 +582,6 @@ MonoBehaviour:
   _textureFilterMode: 1
   _textureWrapMode: 1
   _textureAnisoLevel: 0
-  _useVideoResolve: 0
-  _videoResolveOptions:
-    applyHSBC: 0
-    hue: 0
-    saturation: 0.5
-    brightness: 0.5
-    contrast: 0.5
-    gamma: 1
-    tint: {r: 1, g: 1, b: 1, a: 1}
-    generateMipmaps: 0
   _sideloadSubtitles: 0
   _subtitlePath:
     _pathType: 2
@@ -391,7 +596,6 @@ MonoBehaviour:
   _keyAuth:
     keyServerToken: 
     overrideDecryptionKeyBase64: 
-    overrideDecryptionKey: 
   _events:
     m_PersistentCalls:
       m_Calls: []
@@ -406,9 +610,9 @@ MonoBehaviour:
     keyAuth:
       keyServerToken: 
       overrideDecryptionKeyBase64: 
-      overrideDecryptionKey: 
     videoApi: 0
     useHardwareDecoding: 1
+    useRendererSync: 1
     useTextureMips: 0
     use10BitTextures: 0
     hintAlphaChannel: 0
@@ -423,7 +627,7 @@ MonoBehaviour:
     pauseOnPrerollComplete: 0
     forceAudioOutputDeviceName: 
     preferredFilters: []
-    audioOutput: 0
+    _audioMode: 0
     audio360ChannelMode: 0
     startWithHighestBitrate: 0
     useLowLiveLatency: 0
@@ -431,15 +635,14 @@ MonoBehaviour:
     prerollFrameCount: 4
     useUnityAudio: 0
     enableAudio360: 0
-  _optionsMacOSX:
+  _options_macOS:
     httpHeaders:
       httpHeaders: []
     keyAuth:
       keyServerToken: 
       overrideDecryptionKeyBase64: 
-      overrideDecryptionKey: 
     textureFormat: 0
-    audioMode: 0
+    _audioMode: 0
     _flags: 0
     maximumPlaybackRate: 2
     _preferredPeakBitRate: 0
@@ -447,15 +650,14 @@ MonoBehaviour:
     _preferredForwardBufferDuration: 0
     _preferredMaximumResolution: 0
     _customPreferredMaximumResolution: {x: 0, y: 0}
-  _optionsIOS:
+  _options_iOS:
     httpHeaders:
       httpHeaders: []
     keyAuth:
       keyServerToken: 
       overrideDecryptionKeyBase64: 
-      overrideDecryptionKey: 
     textureFormat: 0
-    audioMode: 0
+    _audioMode: 0
     _flags: 0
     maximumPlaybackRate: 2
     _preferredPeakBitRate: 0
@@ -463,15 +665,29 @@ MonoBehaviour:
     _preferredForwardBufferDuration: 0
     _preferredMaximumResolution: 0
     _customPreferredMaximumResolution: {x: 0, y: 0}
-  _optionsTVOS:
+  _options_tvOS:
     httpHeaders:
       httpHeaders: []
     keyAuth:
       keyServerToken: 
       overrideDecryptionKeyBase64: 
-      overrideDecryptionKey: 
     textureFormat: 0
-    audioMode: 0
+    _audioMode: 0
+    _flags: 0
+    maximumPlaybackRate: 2
+    _preferredPeakBitRate: 0
+    _preferredPeakBitRateUnits: 1
+    _preferredForwardBufferDuration: 0
+    _preferredMaximumResolution: 0
+    _customPreferredMaximumResolution: {x: 0, y: 0}
+  _options_visionOS:
+    httpHeaders:
+      httpHeaders: []
+    keyAuth:
+      keyServerToken: 
+      overrideDecryptionKeyBase64: 
+    textureFormat: 0
+    _audioMode: 0
     _flags: 0
     maximumPlaybackRate: 2
     _preferredPeakBitRate: 0
@@ -485,23 +701,28 @@ MonoBehaviour:
     keyAuth:
       keyServerToken: 
       overrideDecryptionKeyBase64: 
-      overrideDecryptionKey: 
+    textureFormat: 0
+    _audioMode: 0
     _preferredMaximumResolution: 0
     _customPreferredMaximumResolution: {x: 0, y: 0}
     _preferredPeakBitRate: 0
     _preferredPeakBitRateUnits: 1
     videoApi: 2
-    useFastOesPath: 0
-    showPosterFrame: 0
-    audioOutput: 0
     audio360ChannelMode: 0
+    audio360LatencyMS: 0
     preferSoftwareDecoder: 0
+    forceRtpTCP: 0
+    forceEnableMediaCodecAsynchronousQueueing: 0
     fileOffset: 0
     startWithHighestBitrate: 0
     minBufferMs: 50000
     maxBufferMs: 50000
     bufferForPlaybackMs: 2500
     bufferForPlaybackAfterRebufferMs: 5000
+    useFastOesPath: 0
+    audioOutput: 0
+    blitTextureFiltering: 0
+    forceEnableMediaCodecAsyncQueueing: 0
     enableAudio360: 0
   _optionsWindowsUWP:
     httpHeaders:
@@ -509,14 +730,14 @@ MonoBehaviour:
     keyAuth:
       keyServerToken: 
       overrideDecryptionKeyBase64: 
-      overrideDecryptionKey: 
     useHardwareDecoding: 1
+    useRendererSync: 1
     useTextureMips: 0
     use10BitTextures: 0
     hintOutput10Bit: 0
     useLowLatency: 0
     videoApi: 1
-    audioOutput: 0
+    _audioMode: 0
     audio360ChannelMode: 0
     startWithHighestBitrate: 0
     useLowLiveLatency: 0
@@ -526,7 +747,6 @@ MonoBehaviour:
     keyAuth:
       keyServerToken: 
       overrideDecryptionKeyBase64: 
-      overrideDecryptionKey: 
     externalLibrary: 0
     useTextureMips: 0
   m_VideoPath: 
@@ -864,7 +1084,10 @@ MonoBehaviour:
   rawImage: {fileID: 4032325321026277636}
   backend: 0
   avproMediaPlayer: {fileID: 7883501459803883360}
-  videoPath: BigBuckBunny-360p30-H264.mp4
+  videoFullPath: 
+  videoFileName: BigBuckBunny-360p30-H264.mp4
+  testClip: {fileID: 0}
+  videoBundleName: base_base_video.ab
   autoStart: 1
 --- !u!1 &3638429928036545347
 GameObject:
@@ -1504,6 +1727,7 @@ RectTransform:
   - {fileID: 8896656678765327410}
   - {fileID: 4214488813305192125}
   - {fileID: 2809613775261044506}
+  - {fileID: 7203187912906689409}
   - {fileID: 8439036280046436320}
   - {fileID: 5332070916776322997}
   m_Father: {fileID: 0}

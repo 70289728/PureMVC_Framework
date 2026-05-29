@@ -44,6 +44,7 @@ public class VideoTestRunner : MonoBehaviour
 
     private IVideoPlayer player;
     private TimelinePlayer timelinePlayer;
+    private string tempVideoPath; // temp file extracted from AssetBundle for AVPro on Android
 
     public enum VideoTestBackend { Unity, AVPro }
 
@@ -105,49 +106,97 @@ public class VideoTestRunner : MonoBehaviour
 
         ITimelineAction videoAction;
 
-        // Android / non-Editor: auto-load VideoClip from AssetBundle if testClip not assigned
-#if !UNITY_EDITOR
-        if (testClip == null && backend == VideoTestBackend.Unity && AssetBundleManager.Instance != null)
-        {
-            testClip = AssetBundleManager.Instance.LoadAsset<VideoClip>(videoBundleName, videoFileName);
-            if (testClip != null)
-                Log.d($"Auto-loaded VideoClip from AssetBundle [{videoBundleName}]: {videoFileName}", "VideoTest");
-            else
-                Log.w($"Failed to load VideoClip from AssetBundle [{videoBundleName}]: {videoFileName}", "VideoTest");
-        }
-#endif
+#if UNITY_EDITOR
+        // Editor: use file path directly (no AssetBundle extraction needed)
+        string path = ResolveVideoPath();
 
-        // Priority 1: VideoClip from AssetBundle (Unity backend only)
-        if (testClip != null && backend == VideoTestBackend.Unity)
+        if (backend == VideoTestBackend.Unity)
         {
             player = new UnityVideoPlayerImpl();
-            player.LoadClip(testClip);
-            videoAction = new VideoAction(player, rawImage, preloaded: true);
-            Log.d($"Playing [Unity/AssetBundle]: {testClip.name}", "VideoTest");
+            videoAction = new VideoAction(player, rawImage, path, ownsPlayer: true);
         }
         else
         {
-            string path = ResolveVideoPath();
+            if (avproMediaPlayer == null)
+            {
+                Log.e("Assign avproMediaPlayer field!", "VideoTest");
+                return;
+            }
+            player = null;
+            avproMediaPlayer.OpenMedia(MediaPathType.AbsolutePathOrURL, path, autoPlay: false);
+            videoAction = new AVProControlAction(avproMediaPlayer);
+        }
 
-            if (backend == VideoTestBackend.Unity)
+        Log.d($"Playing [{backend}]: {path}", "VideoTest");
+#else
+        // Android / Runtime: always load from AssetBundle
+        // Unity backend: VideoClip directly
+        // AVPro backend: NOT supported on Android (requires raw .mp4 on disk, not inside APK/AssetBundle)
+        // To use AVPro on Android, place .mp4 in StreamingAssets/Video/ and copy to persistentDataPath on first run.
+        if (AssetBundleManager.Instance == null)
+        {
+            Log.e("AssetBundleManager not initialized", "VideoTest");
+            return;
+        }
+
+        if (backend == VideoTestBackend.Unity)
+        {
+            testClip = AssetBundleManager.Instance.LoadAsset<VideoClip>(videoBundleName, videoFileName);
+            if (testClip != null)
             {
                 player = new UnityVideoPlayerImpl();
-                videoAction = new VideoAction(player, rawImage, path, ownsPlayer: true);
+                player.LoadClip(testClip);
+                videoAction = new VideoAction(player, rawImage, preloaded: true);
+                Log.d($"Playing [Unity/AssetBundle]: {testClip.name}", "VideoTest");
             }
             else
             {
-                if (avproMediaPlayer == null)
-                {
-                    Log.e("Assign avproMediaPlayer field!", "VideoTest");
-                    return;
-                }
-                player = null;
-                avproMediaPlayer.OpenMedia(MediaPathType.AbsolutePathOrURL, path, autoPlay: false);
-                videoAction = new AVProControlAction(avproMediaPlayer);
+                Log.e($"Failed to load VideoClip from {videoBundleName}/{videoFileName}", "VideoTest");
+                return;
+            }
+        }
+        else
+        {
+            // AVPro on Android: first run copies .mp4 from StreamingAssets to persistentDataPath,
+            // then passes file path to AVPro (ExoPlayer needs disk file, not APK-internal jar URI).
+            if (avproMediaPlayer == null)
+            {
+                Log.e("Assign avproMediaPlayer field!", "VideoTest");
+                return;
             }
 
-            Log.d($"Playing [{backend}]: {path}", "VideoTest");
+            string streamingPath = System.IO.Path.Combine(Application.streamingAssetsPath, "Video", videoFileName);
+            string persistentPath = System.IO.Path.Combine(Application.persistentDataPath, "Video", videoFileName);
+
+            // First run: copy from StreamingAssets (jar URI) to persistent disk
+            if (!System.IO.File.Exists(persistentPath))
+            {
+                using (var www = UnityEngine.Networking.UnityWebRequest.Get(streamingPath))
+                {
+                    www.SendWebRequest();
+                    while (!www.isDone) { }
+                    if (www.result == UnityEngine.Networking.UnityWebRequest.Result.Success)
+                    {
+                        string dir = System.IO.Path.GetDirectoryName(persistentPath);
+                        if (!System.IO.Directory.Exists(dir))
+                            System.IO.Directory.CreateDirectory(dir);
+                        System.IO.File.WriteAllBytes(persistentPath, www.downloadHandler.data);
+                        Log.d($"Copied video to disk: {persistentPath}", "VideoTest");
+                    }
+                    else
+                    {
+                        Log.e($"Failed to copy video: {www.error}", "VideoTest");
+                        return;
+                    }
+                }
+            }
+
+            player = null;
+            avproMediaPlayer.OpenMedia(MediaPathType.AbsolutePathOrURL, persistentPath, autoPlay: false);
+            videoAction = new AVProControlAction(avproMediaPlayer);
+            Log.d($"Playing [AVPro]: {persistentPath}", "VideoTest");
         }
+#endif
 
         var clips = new List<TimelineClip>
         {

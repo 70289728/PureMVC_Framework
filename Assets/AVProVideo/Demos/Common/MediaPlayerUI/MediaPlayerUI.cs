@@ -1,4 +1,4 @@
-﻿// UnityEngine.UI was moved to a package in 2019.2.0
+// UnityEngine.UI was moved to a package in 2019.2.0
 // Unfortunately no way to test for this across all Unity versions yet
 // You can set up the asmdef to reference the new package, but the package doesn't 
 // existing in Unity 2017 etc, and it throws an error due to missing reference
@@ -95,9 +95,10 @@ namespace RenderHeads.Media.AVProVideo.Demos
 
 		void Awake()
 		{
-			#if UNITY_IOS
-			Application.targetFrameRate = 60;
-			#endif
+#if UNITY_IOS || UNITY_ANDROID
+			Debug.Log("Setting Application.targetFrameRate to: " + Screen.currentResolution.refreshRate);
+			Application.targetFrameRate = Screen.currentResolution.refreshRate;
+#endif
 		}
 
 		void Start()
@@ -105,6 +106,13 @@ namespace RenderHeads.Media.AVProVideo.Demos
 			if (_mediaPlayer)
 			{
 				_audioVolume = _mediaPlayer.AudioVolume;
+				#if UNITY_ANDROID
+					// Disable screen sleep timeout if the video is set to auto-start
+					if (_mediaPlayer.AutoStart)
+					{
+						Screen.sleepTimeout = SleepTimeout.NeverSleep;
+					}
+				#endif
 			}
 			SetupPlayPauseButton();
 			SetupTimeBackForwardButtons();
@@ -131,6 +139,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 				{
 					return true;
 				}
+				#if (!ENABLE_INPUT_SYSTEM || ENABLE_LEGACY_INPUT_MANAGER)
 				bool touchInput = (Input.touchSupported && Input.touchCount > 0);
 				bool mouseInput = (Input.mousePresent && (Input.mousePosition != _previousMousePos || Input.mouseScrollDelta != Vector2.zero || Input.GetMouseButton(0)));
 
@@ -142,6 +151,9 @@ namespace RenderHeads.Media.AVProVideo.Demos
 				}
 
 				return false;
+				#else
+				return true;
+				#endif
 			}
 		}
 
@@ -345,6 +357,9 @@ namespace RenderHeads.Media.AVProVideo.Demos
 					_overlayManager.TriggerFeedback(OverlayManager.Feedback.Play);
 				}
 				_mediaPlayer.Play();
+				#if UNITY_ANDROID
+					Screen.sleepTimeout = SleepTimeout.NeverSleep;
+				#endif
 			}
 		}
 
@@ -360,6 +375,9 @@ namespace RenderHeads.Media.AVProVideo.Demos
 					}
 				}
 				_mediaPlayer.Pause();
+				#if UNITY_ANDROID
+					Screen.sleepTimeout = SleepTimeout.SystemSetting;
+				#endif
 			}
 		}
 
@@ -402,7 +420,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 		{
 			if (_mediaPlayer && _mediaPlayer.Control != null)
 			{
-				if (_mediaPlayer.Control.IsMuted())
+				if (_mediaPlayer.AudioMuted)
 				{
 					MuteAudio(false);
 				}
@@ -418,7 +436,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 			if (_mediaPlayer && _mediaPlayer.Control != null)
 			{
 				// Change mute
-				_mediaPlayer.Control.MuteAudio(mute);
+				_mediaPlayer.AudioMuted = mute;
 
 				// Update the UI
 				// The UI element is constantly updated by the Update() method
@@ -559,6 +577,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 		private void UpdateAudioSpectrum()
 		{
 			bool showAudioSpectrum = false;
+#if !UNITY_IOS || UNITY_EDITOR
 			if (_mediaPlayer && _mediaPlayer.Control != null)
 			{
 				AudioSource audioSource = _mediaPlayer.AudioSource;
@@ -607,7 +626,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 					_audioSpectrumMaterial.SetFloat(_propSpectrumRange.Id, (float)sampleRange);
 				}
 			}
-
+#endif
 			if (_imageAudioSpectrum)
 			{
 				_imageAudioSpectrum.gameObject.SetActive(showAudioSpectrum);
@@ -666,6 +685,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 			{
 				result = false;
 			}
+			#if (!ENABLE_INPUT_SYSTEM || ENABLE_LEGACY_INPUT_MANAGER)
 			else if (Input.mousePresent)
 			{
 				// Check whether the mouse cursor is over the controls, in which case we can't hide the UI
@@ -676,6 +696,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 				Rect rr = RectTransformUtility.PixelAdjustRect(rect, null);
 				result = !rr.Contains(canvasPos);
 			}
+			#endif
 			return result;
 		}
 
@@ -737,6 +758,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 				TimeRange timelineRange = GetTimelineRange();
 
 				// Update timeline hover popup
+				#if (!ENABLE_INPUT_SYSTEM || ENABLE_LEGACY_INPUT_MANAGER)
 				if (_timelineTip != null)
 				{
 					if (_isHoveringOverTimeline)
@@ -796,6 +818,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 						_segmentsSeek.gameObject.SetActive(false);
 					}
 				}
+				#endif
 
 				// Updated stalled display
 				if (_overlayManager)
@@ -810,6 +833,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 				// Update keyboard input
 				if (_enableKeyboardControls)
 				{
+					#if (!ENABLE_INPUT_SYSTEM || ENABLE_LEGACY_INPUT_MANAGER)
 					// Keyboard toggle play/pause
 					if (Input.GetKeyDown(KeyTogglePlayPause))
 					{
@@ -841,6 +865,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 					{
 						ToggleMute();
 					}
+					#endif
 				}
 
 				// Animation play/pause button
@@ -862,7 +887,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 				{
 					float t = _volumeMaterial.GetFloat(_propMute.Id);
 					float d = 1f;
-					if (!_mediaPlayer.Control.IsMuted())
+					if (!_mediaPlayer.AudioMuted)
 					{
 						d = -1f;
 					}
@@ -915,7 +940,7 @@ namespace RenderHeads.Media.AVProVideo.Demos
 				}
 
 				// Update time slider position
-				if (_sliderTime)
+				if (_sliderTime && !_isHoveringOverTimeline)
 				{
 					double t = 0.0;
 					if (timelineRange.duration > 0.0)

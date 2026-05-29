@@ -52,8 +52,13 @@ namespace RenderHeads.Media.AVProVideo.Editor
 				}
 			}
 
+#if UNITY_6000_0_OR_NEWER
+			// Add in line to set useFullClasspathForDexingTransform to true
+			stringBuilder.AppendLine( "android.useFullClasspathForDexingTransform=true" );
+#else
 			// Add in line to set enableDexingArtifactTransform to false
 			stringBuilder.AppendLine( "android.enableDexingArtifactTransform=false" );
+#endif
 
 			// Write out the amended file
 			File.WriteAllText( filePath, stringBuilder.ToString() );

@@ -11,6 +11,12 @@ public class UILoginMediator : UIMediatorBase
     [SerializeField] private InputField passwordInput;
     [SerializeField] private Button loginBtn;
     [SerializeField] private Button registerBtn;
+    [SerializeField] private Button switchBtn;
+    #endregion
+
+    #region Extra UI Components
+    // Place custom MonoBehaviour references here (manually added)
+    private VideoTestRunner videoTestRunner;
     #endregion
 
     public UILoginMediator(string mediatorName, GameObject viewComponent, int layer, bool isReuseView = false)
@@ -63,7 +69,6 @@ public class UILoginMediator : UIMediatorBase
                 case "PasswordInput": passwordInput = bind.Component; break;
             }
         }
-
         var allButtonBinds = viewTrans.GetComponentsInChildren<ButtonBind>(true);
         foreach (var bind in allButtonBinds)
         {
@@ -71,10 +76,11 @@ public class UILoginMediator : UIMediatorBase
             {
                 case "LoginBtn": loginBtn = bind.Component; break;
                 case "RegisterBtn": registerBtn = bind.Component; break;
+                case "SwitchBtn": switchBtn = bind.Component; break;
             }
         }
-
         InitClickEvents();
+        InitUIComponentsExtra();
     }
 
     protected override void RegisterUIEvents()
@@ -97,6 +103,11 @@ public class UILoginMediator : UIMediatorBase
         {
             registerBtn.onClick.AddListener(OnRegisterBtnClick);
         }
+        if (switchBtn != null)
+        {
+            switchBtn.onClick.AddListener(OnSwitchBtnClick);
+        }
+        InitClickEventsExtra();
     }
     #endregion
 
@@ -216,6 +227,18 @@ public class UILoginMediator : UIMediatorBase
     }
     #endregion
 
+    private void OnSwitchBtnClick()
+    {
+        if(videoTestRunner != null)
+        {
+             var curMode = videoTestRunner.backend;
+             var newMode = curMode == VideoTestRunner.VideoTestBackend.Unity ? VideoTestRunner.VideoTestBackend.AVPro : VideoTestRunner.VideoTestBackend.Unity;
+             videoTestRunner.backend = newMode;
+            videoTestRunner.RunTest();
+        }
+       
+    }
+
     #region Update (Optional)
     // protected override bool NeedsUpdate() => true;
     // protected override UpdateFrequency GetUpdateFrequency() => UpdateFrequency.Low;
@@ -224,4 +247,13 @@ public class UILoginMediator : UIMediatorBase
     // protected override void OnFixedUpdate(float fixedDeltaTime) { }
     // protected override void OnLateUpdate(float deltaTime) { }
     #endregion
+    protected virtual void InitUIComponentsExtra()
+    {
+        videoTestRunner = viewTrans.Find("VideoRunTest")?.GetComponent<VideoTestRunner>();
+    }
+
+    private void InitClickEventsExtra()
+    {
+    }
+
 }

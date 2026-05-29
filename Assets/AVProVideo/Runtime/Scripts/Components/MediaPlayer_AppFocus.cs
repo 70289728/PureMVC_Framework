@@ -2,7 +2,7 @@
 using UnityEngine;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2021 RenderHeads Ltd.  All rights reserved.
+// Copyright 2015-2022 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo
@@ -16,7 +16,7 @@ namespace RenderHeads.Media.AVProVideo
 #if !(UNITY_EDITOR_WIN || UNITY_STANDALONE_WIN)
 //			Debug.Log("OnApplicationFocus: focusStatus: " + focusStatus);
 
-			if (focusStatus)
+			if (focusStatus && (isActiveAndEnabled && enabled))
 			{
 				if (Control != null && _wasPlayingOnPause)
 				{

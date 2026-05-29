@@ -35,33 +35,47 @@
 			#pragma multi_compile __ HIGH_QUALITY
 			#pragma multi_compile __ APPLY_GAMMA
 			#pragma multi_compile __ USING_DEFAULT_TEXTURE
+			#pragma multi_compile __ USING_URP
 
 			#extension GL_OES_EGL_image_external : require
 			#extension GL_OES_EGL_image_external_essl3 : enable
 			precision mediump float;
 
 #include "UnityCG.glslinc"
+#if defined(STEREO_MULTIVIEW_ON)
+	UNITY_SETUP_STEREO_RENDERING
+#endif
 #define SHADERLAB_GLSL
 #include "AVProVideo.cginc"
 
 			#ifdef VERTEX
 
+			INLINE bool Android_IsStereoEyeLeft()
+			{
+				#if defined(STEREO_MULTIVIEW_ON)
+					int eyeIndex = SetupStereoEyeIndex();
+					return (eyeIndex == 0);
+				#else
+					return IsStereoEyeLeft();
+				#endif
+			}
+
 #if defined(HIGH_QUALITY)
-		varying vec3 texNormal;
+			varying vec3 texNormal;
 	#if defined(STEREO_TOP_BOTTOM) || defined(STEREO_LEFT_RIGHT)
-		varying vec4 texScaleOffset;
+			varying vec4 texScaleOffset;
 	#endif
 #else
-		varying vec3 texVal;
+			varying vec3 texVal;
 	#if defined(ALPHAPACK_TOP_BOTTOM) || defined(ALPHAPACK_LEFT_RIGHT)
-		varying vec2 alphaPackOffset;
+			varying vec2 alphaPackOffset;
 	#endif
-		uniform vec4 _MainTex_ST;
-		uniform vec4 _MainTex_TexelSize;
-		uniform mat4 _TextureMatrix;
+			uniform vec4 _MainTex_ST;
+			uniform vec4 _MainTex_TexelSize;
+			uniform mat4 _MainTex_Xfrm;
 #endif
 #if defined(STEREO_DEBUG)
-		varying vec4 tint;
+			varying vec4 tint;
 #endif
 
 
@@ -74,13 +88,18 @@
 
 			void main()
 			{
+#if defined(STEREO_MULTIVIEW_ON)
+				int eyeIndex = SetupStereoEyeIndex();
+				mat4 vpMatrix = GetStereoMatrixVP(eyeIndex);
+				gl_Position = vpMatrix * unity_ObjectToWorld * gl_Vertex;
+#else
 				gl_Position = XFormObjectToClip(gl_Vertex);
+#endif
 
 #if defined(HIGH_QUALITY)
 				texNormal = normalize(gl_Normal.xyz);
 	#if defined(STEREO_TOP_BOTTOM) || defined(STEREO_LEFT_RIGHT)
-				bool isLeftEye = IsStereoEyeLeft();
-				texScaleOffset = GetStereoScaleOffset(isLeftEye, false);
+				texScaleOffset = GetStereoScaleOffset(Android_IsStereoEyeLeft(), false);
 	#endif
 #else
 				texVal.xy = gl_MultiTexCoord0.xy;
@@ -96,16 +115,15 @@
 	#endif
 
 				// Apply texture transformation matrix - adjusts for offset/cropping (when the decoder decodes in blocks that overrun the video frame size, it pads)
-				texVal.xy = (_TextureMatrix * vec4(texVal.x, texVal.y, 0.0, 1.0)).xy;
+				texVal.xy = (_MainTex_Xfrm * vec4(texVal.x, texVal.y, 0.0, 1.0)).xy;
 
 	#if defined(STEREO_TOP_BOTTOM) || defined(STEREO_LEFT_RIGHT)
-				bool isLeftEye = IsStereoEyeLeft();
-				vec4 scaleOffset = GetStereoScaleOffset(isLeftEye, false);
+				vec4 scaleOffset = GetStereoScaleOffset(Android_IsStereoEyeLeft(), false);
 
 				texVal.xy *= scaleOffset.xy;
 				texVal.xy += scaleOffset.zw;
 	#elif defined(STEREO_CUSTOM_UV)
-				if (!IsStereoEyeLeft())
+				if(!Android_IsStereoEyeLeft())
 				{
 					texVal.xy= transformTex(gl_MultiTexCoord1.xy, _MainTex_ST);
 					texVal.xy = vec2(1.0, 1.0) - texVal.xy;
@@ -124,7 +142,7 @@
 #endif
 
 #if defined(STEREO_DEBUG)
-				tint = GetStereoDebugTint(IsStereoEyeLeft());
+				tint = GetStereoDebugTint(Android_IsStereoEyeLeft());
 #endif
 			}
 			#endif
@@ -139,7 +157,7 @@
 	#if defined(STEREO_TOP_BOTTOM) || defined(STEREO_LEFT_RIGHT)
 			varying vec4 texScaleOffset;
 	#endif
-			uniform mat4 _TextureMatrix;
+			uniform mat4 _MainTex_Xfrm;
 #else
 			varying vec3 texVal;
 	#if defined(ALPHAPACK_TOP_BOTTOM) || defined(ALPHAPACK_LEFT_RIGHT)
@@ -204,7 +222,7 @@
 	#endif
 
 				// Apply texture transformation matrix - adjusts for offset/cropping (when the decoder decodes in blocks that overrun the video frame size, it pads)
-				uv.xy = (_TextureMatrix * vec4(uv.x, uv.y, 0.0, 1.0)).xy;
+				uv.xy = (_MainTex_Xfrm * vec4(uv.x, uv.y, 0.0, 1.0)).xy;
 
 	#if defined(STEREO_TOP_BOTTOM) || defined(STEREO_LEFT_RIGHT)
 				uv.xy *= texScaleOffset.xy;

@@ -5,7 +5,7 @@ using UnityEngine;
 using RenderHeads.Media.AVProVideo;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2021 RenderHeads Ltd.  All rights reserved.
+// Copyright 2015-2022 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo.Experimental
@@ -15,7 +15,7 @@ namespace RenderHeads.Media.AVProVideo.Experimental
 	/// This feature requires Ultra Edition
 	/// </summary>
 	[AddComponentMenu("AVPro Video/Media Player Sync (BETA)", -90)]
-	[HelpURL("http://renderheads.com/products/avpro-video/")]
+	[HelpURL("https://www.renderheads.com/products/avpro-video/")]
 	public class MediaPlayerSync : MonoBehaviour
 	{
 		[SerializeField] MediaPlayer _masterPlayer = null;

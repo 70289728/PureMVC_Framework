@@ -10,6 +10,23 @@ var AVProVideoWebGL =
 	count: 0,
 	players: [],
 
+	isSafari: function() {
+		return navigator.vendor && navigator.vendor.indexOf('Apple') > -1 && navigator.userAgent && navigator.userAgent.indexOf('CriOS') == -1 && navigator.userAgent.indexOf('FxiOS') == -1;
+	},
+
+	is_iOS: function() {
+		return [
+			'iPad Simulator',
+			'iPhone Simulator',
+			'iPod Simulator',
+			'iPad',
+			'iPhone',
+			'iPod'
+		].includes(navigator.platform)
+		// iPad on iOS 13 detection
+		|| (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+	},
+
 	hasPlayer__deps: ["players"],
 	hasPlayer: function (videoIndex)
 	{
@@ -41,7 +58,7 @@ var AVProVideoWebGL =
 		return false;
 	},
 
-	AVPPlayerInsertVideoElement__deps: ["count", "players"],
+	AVPPlayerInsertVideoElement__deps: ["count", "players", "isSafari", "is_iOS"],
 	AVPPlayerInsertVideoElement: function (path, idValues, externalLibrary)
 	{
 		if (!path) { return false; }
@@ -62,7 +79,7 @@ var AVProVideoWebGL =
 			var player = dashjs.MediaPlayer().create();
 			player.initialize(vid, path, true);
 		}
-		else if (externalLibrary == 2)
+		else if (externalLibrary == 2 && !(_is_iOS() || _isSafari()))
 		{
 			useNativeSrcPath = false;
 			hls = new Hls();
@@ -194,6 +211,13 @@ var AVProVideoWebGL =
 		vid.crossOrigin = "anonymous";
 		vid.preload = 'auto';
 		vid.autoplay = false;
+
+		if (_is_iOS())
+		{
+			vid.autoplay = true;
+			vid.playsInline = true;
+		}
+
 		if (useNativeSrcPath)
 		{
 			vid.src = path;

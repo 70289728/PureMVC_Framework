@@ -1,4 +1,4 @@
-﻿//#define AVPROVIDEO_BETA_SUPPORT_TIMESCALE		// BETA FEATURE: comment this in if you want to support frame stepping based on changes in Time.timeScale or Time.captureFramerate
+//#define AVPROVIDEO_BETA_SUPPORT_TIMESCALE		// BETA FEATURE: comment this in if you want to support frame stepping based on changes in Time.timeScale or Time.captureFramerate
 //#define AVPROVIDEO_FORCE_NULL_MEDIAPLAYER		// DEV FEATURE: comment this out to make all mediaplayers use the null mediaplayer
 //#define AVPROVIDEO_DISABLE_LOGGING			// DEV FEATURE: disables Debug.Log from AVPro Video
 #define AVPROVIDEO_SUPPORT_LIVEEDITMODE
@@ -8,7 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 
 //-----------------------------------------------------------------------------
-// Copyright 2015-2021 RenderHeads Ltd.  All rights reserved.
+// Copyright 2015-2022 RenderHeads Ltd.  All rights reserved.
 //-----------------------------------------------------------------------------
 
 namespace RenderHeads.Media.AVProVideo
@@ -23,7 +23,7 @@ namespace RenderHeads.Media.AVProVideo
 	[ExecuteInEditMode]
 #endif
 	[AddComponentMenu("AVPro Video/Media Player", -100)]
-	[HelpURL("http://renderheads.com/products/avpro-video/")]
+	[HelpURL("https://www.renderheads.com/products/avpro-video/")]
 	public partial class MediaPlayer : MonoBehaviour
 	{
 		// These fields are just used to setup the default properties for a new video that is about to be loaded
@@ -56,21 +56,79 @@ namespace RenderHeads.Media.AVProVideo
 
 		[FormerlySerializedAs("m_Loop")]
 		[SerializeField] bool _loop = false;
-		public bool Loop { get { return _loop; } set { _loop = value; if (_controlInterface != null) _controlInterface.SetLooping(_loop); } }
+		public bool Loop
+		{
+			get
+			{
+				return (_controlInterface != null) ? _controlInterface.IsLooping() : _loop;
+			}
+
+			set
+			{
+				_loop = value;
+				if (_controlInterface != null)
+					_controlInterface.SetLooping(_loop);
+			}
+		}
 
 		[FormerlySerializedAs("m_Volume")]
 		[Range(0.0f, 1.0f)]
 		[SerializeField] float _audioVolume = 1.0f;
-		public virtual float AudioVolume { get { return _audioVolume; } set { _audioVolume = Mathf.Clamp01(value); if (_controlInterface != null) _controlInterface.SetVolume(_audioVolume); } }
+		public virtual float AudioVolume
+		{
+			get
+			{
+				return (_controlInterface != null) ? _controlInterface.GetVolume() : _audioVolume;
+			}
+
+			set
+			{
+				_audioVolume = Mathf.Clamp01(value);
+				if (_controlInterface != null)
+					_controlInterface.SetVolume(_audioVolume);
+			}
+		}
 
 		[FormerlySerializedAs("m_Balance")]
 		[Range(-1.0f, 1.0f)]
 		[SerializeField] float _audioBalance = 0.0f;
-		public float AudioBalance { get { return _audioBalance; } set { _audioBalance = Mathf.Clamp(value, -1f, 1f); if (_controlInterface != null) _controlInterface.SetBalance(_audioBalance); } }
+		public float AudioBalance
+		{
+			get
+			{
+				return (_controlInterface != null) ? _controlInterface.GetBalance() : _audioBalance;
+			}
+
+			set
+			{
+				_audioBalance = Mathf.Clamp(value, -1f, 1f);
+				if (_controlInterface != null)
+					_controlInterface.SetBalance(_audioBalance);
+			}
+		}
 
 		[FormerlySerializedAs("m_Muted")]
 		[SerializeField] bool _audioMuted = false;
-		public virtual bool AudioMuted { get { return _audioMuted; } set { _audioMuted = value; if (_controlInterface != null) _controlInterface.MuteAudio(_audioMuted); } }
+		public virtual bool AudioMuted
+		{
+			get
+			{
+				return (_controlInterface != null) ? _controlInterface.IsMuted() : _audioMuted;
+			}
+
+			set
+			{
+				_audioMuted = value;
+				if (_controlInterface != null)
+				{
+					#if !UNITY_EDITOR
+						_controlInterface.MuteAudio(_audioMuted);
+					#else
+						_controlInterface.MuteAudio(_audioMuted || UnityEditor.EditorUtility.audioMasterMute);
+					#endif
+				}
+			}
+		}
 
 		private AudioSource _audioSource = null;
 		public AudioSource AudioSource { get { return _audioSource; } internal set { _audioSource = value; } }
@@ -78,7 +136,20 @@ namespace RenderHeads.Media.AVProVideo
 		[FormerlySerializedAs("m_PlaybackRate")]
 		[Range(-4.0f, 4.0f)]
 		[SerializeField] float _playbackRate = 1.0f;
-		public float PlaybackRate { get { return _playbackRate; } set { _playbackRate = value; if (_controlInterface != null) _controlInterface.SetPlaybackRate(_playbackRate); } }
+		public float PlaybackRate
+		{
+			get
+			{
+				return (_controlInterface != null) ? _controlInterface.GetPlaybackRate() : _playbackRate;
+			}
+
+			set
+			{
+				_playbackRate = value;
+				if (_controlInterface != null)
+					_controlInterface.SetPlaybackRate(_playbackRate);
+			}
+		}
 
 		// Resampler
 
@@ -89,7 +160,7 @@ namespace RenderHeads.Media.AVProVideo
 		[FormerlySerializedAs("m_ResampleMode")]
 		[SerializeField] Resampler.ResampleMode _resampleMode = Resampler.ResampleMode.POINT;
 		public Resampler.ResampleMode ResampleMode { get { return _resampleMode; } set { _resampleMode = value; } }
-		
+
 		[FormerlySerializedAs("m_ResampleBufferSize")]
 		[Range(3, 10)]
 		[SerializeField] int _resampleBufferSize = 5;
@@ -106,28 +177,94 @@ namespace RenderHeads.Media.AVProVideo
 
 		[FormerlySerializedAs("m_FilterMode")]
 		[SerializeField] FilterMode _textureFilterMode = FilterMode.Bilinear;
-		public FilterMode TextureFilterMode { get { return _textureFilterMode; } set { _textureFilterMode = value; if (_controlInterface != null) _controlInterface.SetTextureProperties(_textureFilterMode, _textureWrapMode, _textureAnisoLevel); } }
+		public FilterMode TextureFilterMode
+		{
+			get
+			{
+				if (_controlInterface != null)
+				{
+					FilterMode filterMode = FilterMode.Point;
+					TextureWrapMode textureWrapMode = TextureWrapMode.Repeat;
+					int anisoLevel = 0;
+					_controlInterface.GetTextureProperties(out filterMode, out textureWrapMode, out anisoLevel);
+					return filterMode;
+				}
+				else
+					return _textureFilterMode;
+			}
+
+			set
+			{
+				_textureFilterMode = value;
+				if (_controlInterface != null)
+					_controlInterface.SetTextureProperties(_textureFilterMode, _textureWrapMode, _textureAnisoLevel);
+			}
+		}
 
 		[FormerlySerializedAs("m_WrapMode")]
 		[SerializeField] TextureWrapMode _textureWrapMode = TextureWrapMode.Clamp;
-		public TextureWrapMode TextureWrapMode { get { return _textureWrapMode; } set { _textureWrapMode = value; if (_controlInterface != null) _controlInterface.SetTextureProperties(_textureFilterMode, _textureWrapMode, _textureAnisoLevel); } }
+		public TextureWrapMode TextureWrapMode
+		{
+			get
+			{
+				if (_controlInterface != null)
+				{
+					FilterMode filterMode = FilterMode.Point;
+					TextureWrapMode textureWrapMode = TextureWrapMode.Repeat;
+					int anisoLevel = 0;
+					_controlInterface.GetTextureProperties(out filterMode, out textureWrapMode, out anisoLevel);
+					return textureWrapMode;
+				}
+				else
+					return _textureWrapMode;
+			}
+
+			set
+			{
+				_textureWrapMode = value;
+				if (_controlInterface != null)
+					_controlInterface.SetTextureProperties(_textureFilterMode, _textureWrapMode, _textureAnisoLevel);
+			}
+		}
 
 		[FormerlySerializedAs("m_AnisoLevel")]
 		[Range(0, 16)]
 		[SerializeField] int _textureAnisoLevel = 0;
-		public int TextureAnisoLevel { get { return _textureAnisoLevel; } set { _textureAnisoLevel = value; if (_controlInterface != null) _controlInterface.SetTextureProperties(_textureFilterMode, _textureWrapMode, _textureAnisoLevel); } }
+		public int TextureAnisoLevel
+		{
+			get
+			{
+				if (_controlInterface != null)
+				{
+					FilterMode filterMode = FilterMode.Point;
+					TextureWrapMode textureWrapMode = TextureWrapMode.Repeat;
+					int anisoLevel = 0;
+					_controlInterface.GetTextureProperties(out filterMode, out textureWrapMode, out anisoLevel);
+					return anisoLevel;
+				}
+				else
+					return _textureAnisoLevel;
+			}
 
+			set
+			{
+				_textureAnisoLevel = value;
+				if (_controlInterface != null)
+					_controlInterface.SetTextureProperties(_textureFilterMode, _textureWrapMode, _textureAnisoLevel);
+			}
+		}
+
+#if AVPRO_FEATURE_VIDEORESOLVE
 		[SerializeField] bool _useVideoResolve = false;
 		public bool UseVideoResolve { get { return _useVideoResolve; } set { _useVideoResolve = value; } }
 
 		[SerializeField] VideoResolveOptions _videoResolveOptions = VideoResolveOptions.Create();
 		public VideoResolveOptions VideoResolveOptions { get { return _videoResolveOptions; } set { _videoResolveOptions = value; } }
 
-#if AVPRO_FEATURE_VIDEORESOLVE
 		[SerializeField] VideoResolve _videoResolve = new VideoResolve();
 #endif
-		// Sideloaded subtitles
 
+		// Sideloaded subtitles
 		[FormerlySerializedAs("m_LoadSubtitles")]
 		[SerializeField] bool _sideloadSubtitles;
 		public bool SideloadSubtitles { get { return _sideloadSubtitles; } set { _sideloadSubtitles = value; } }
@@ -236,6 +373,7 @@ namespace RenderHeads.Media.AVProVideo
 
 		// Global init
 		private static bool s_GlobalStartup = false;
+		private static bool s_TrialVersion = false;
 
 		// Subtitle state
 		private MediaPath _queueSubtitlePath;
@@ -293,6 +431,8 @@ namespace RenderHeads.Media.AVProVideo
 					Debug.LogError("[AVProVideo] Plugin version number " + nativePluginVersion + " doesn't match the expected version number " + expectedNativePluginVersion + ".  It looks like the plugin didn't upgrade correctly.  To resolve this please restart Unity and try to upgrade the package again.");
 				}
 
+				s_TrialVersion = nativePluginVersion.Contains("-trial");
+
 				if (!s_GlobalStartup)
 				{
 					Helper.LogInfo(string.Format("Initialising AVPro Video v{0} (native plugin v{1}) on {2}/{3} (MT {4}) on {5}", Helper.AVProVideoVersion, nativePluginVersion, SystemInfo.graphicsDeviceName, SystemInfo.graphicsDeviceVersion, SystemInfo.graphicsMultiThreaded, Application.platform));
@@ -344,7 +484,7 @@ namespace RenderHeads.Media.AVProVideo
 			_mediaSource = MediaSource.Path;
 			_mediaPath.Path = path;
 			_mediaPath.PathType = pathType;
-			
+
 			return OpenMedia(autoPlay);
 		}
 
@@ -412,7 +552,7 @@ namespace RenderHeads.Media.AVProVideo
 						Debug.LogError("[AVProVideo] No file path specified", this);
 					}
 				}
-				
+
 				if (null != mediaPath)
 				{
 					string fullPath = mediaPath.GetResolvedFullPath();
@@ -439,7 +579,7 @@ namespace RenderHeads.Media.AVProVideo
 #if UNITY_EDITOR_WIN || (!UNITY_EDITOR && UNITY_STANDALONE_WIN)
 						// NOTE: We don't need to call SetAudioChannelMode on Android,
 						// as it's set when the AndroidMediaPlayer object is created
-						if (_optionsWindows.audioOutput == Windows.AudioOutput.FacebookAudio360)
+						if (_optionsWindows._audioMode == Windows.AudioOutput.FacebookAudio360)
 						{
 							_controlInterface.SetAudioChannelMode(_optionsWindows.audio360ChannelMode);
 						}
@@ -448,7 +588,7 @@ namespace RenderHeads.Media.AVProVideo
 							_controlInterface.SetAudioChannelMode(Audio360ChannelMode.INVALID);
 						}
 #elif (!UNITY_EDITOR && UNITY_WSA_10_0)
-						if (_optionsWindowsUWP.audioOutput == WindowsUWP.AudioOutput.FacebookAudio360)
+						if (_optionsWindowsUWP._audioMode == WindowsUWP.AudioOutput.FacebookAudio360)
 						{
 							_controlInterface.SetAudioChannelMode(_optionsWindowsUWP.audio360ChannelMode);
 						}
@@ -465,16 +605,16 @@ namespace RenderHeads.Media.AVProVideo
 						}
 
 						SetLoadOptions();
+						SetPlaybackOptions();
 
-						if (!_controlInterface.OpenMedia(fullPath, fileOffset, customHttpHeaders, mediaHints, (int)_forceFileFormat, startWithHighestBitrate))
+						if (_controlInterface.OpenMedia(fullPath, fileOffset, customHttpHeaders, mediaHints, (int)_forceFileFormat, startWithHighestBitrate))
 						{
-							Debug.LogError("[AVProVideo] Failed to open " + fullPath, this);
+							StartRenderCoroutine();
+							result = true;
 						}
 						else
 						{
-							SetPlaybackOptions();
-							result = true;
-							StartRenderCoroutine();
+							Debug.LogError("[AVProVideo] Failed to open " + fullPath, this);
 						}
 					}
 				}
@@ -494,13 +634,22 @@ namespace RenderHeads.Media.AVProVideo
 		#elif (UNITY_EDITOR_OSX && UNITY_TVOS) || (!UNITY_EDITOR && UNITY_TVOS)
 		#elif (UNITY_EDITOR_OSX || (!UNITY_EDITOR && UNITY_STANDALONE_OSX))
 		#elif (UNITY_EDITOR_WIN) || (!UNITY_EDITOR && UNITY_STANDALONE_WIN)
+			// RJT NOTE: Added Windows here as it currently creates players on demand so most parameters can be passed down pre-'Open()' and honoured
+			// - (Fixes some issues in https://github.com/RenderHeads/UnityPlugin-AVProVideo/issues/1692)
+			if (_optionsWindows.videoApi == Windows.VideoApi.WinRT)
+			{
+				((WindowsRtMediaPlayer)_baseMediaPlayer).SetOptions(_optionsWindows);
+			}
+			else
+			{
+				((WindowsMediaPlayer)_baseMediaPlayer).SetOptions(_optionsWindows);
+			}
 		#elif (!UNITY_EDITOR && UNITY_WSA_10_0)
 		#elif (!UNITY_EDITOR && UNITY_ANDROID)
 		#elif (!UNITY_EDITOR && UNITY_WEBGL)
 			((WebGLMediaPlayer)_baseMediaPlayer).SetOptions(_optionsWebGL);
 		#endif
 	#endif
-
 			// Encryption support
 			PlatformOptions options = GetCurrentPlatformOptions();
 			if (options != null)
@@ -520,7 +669,11 @@ namespace RenderHeads.Media.AVProVideo
 				_controlInterface.SetPlaybackRate(_playbackRate);
 				_controlInterface.SetVolume(_audioVolume);
 				_controlInterface.SetBalance(_audioBalance);
+				#if !UNITY_EDITOR
 				_controlInterface.MuteAudio(_audioMuted);
+				#else
+				_controlInterface.MuteAudio(_audioMuted || UnityEditor.EditorUtility.audioMasterMute);
+				#endif
 				_controlInterface.SetTextureProperties(_textureFilterMode, _textureWrapMode, _textureAnisoLevel);
 			}
 		}
@@ -637,6 +790,7 @@ namespace RenderHeads.Media.AVProVideo
 			if (_playerInterface != null)
 			{
 				Update();
+				_playerInterface.BeginRender();
 				_playerInterface.Render();
 				return true;
 			}
@@ -674,7 +828,7 @@ namespace RenderHeads.Media.AVProVideo
 
 				UpdateAudioHeadTransform();
 				UpdateAudioFocus();
-				
+
 				_playerInterface.Update();
 
 				// Render (done in co-routine)
@@ -694,6 +848,12 @@ namespace RenderHeads.Media.AVProVideo
 		private void LateUpdate()
 		{
 			UpdateResampler();
+
+			// RJT TODO: Better location?
+			if (_playerInterface != null)
+			{
+				_playerInterface.BeginRender();
+			}
 		}
 
 		private void UpdateResampler()
@@ -825,7 +985,9 @@ namespace RenderHeads.Media.AVProVideo
 				WindowsMediaPlayer.DeinitPlatform();
 				WindowsRtMediaPlayer.DeinitPlatform();
 	#elif (UNITY_ANDROID)
+		#if false
 				AndroidMediaPlayer.DeinitPlatform();
+		#endif
 	#endif
 #endif
 				s_GlobalStartup = false;
@@ -880,7 +1042,7 @@ namespace RenderHeads.Media.AVProVideo
 			// Setup for running in the editor (Either OSX, Windows or Linux)
 #if UNITY_EDITOR
 #if (UNITY_EDITOR_OSX && UNITY_EDITOR_64)
-			result = Platform.MacOSX;
+			result = Platform.macOS;
 #elif UNITY_EDITOR_WIN
 			result = Platform.Windows;
 #endif
@@ -889,11 +1051,13 @@ namespace RenderHeads.Media.AVProVideo
 #if (UNITY_STANDALONE_WIN)
 			result = Platform.Windows;
 #elif (UNITY_STANDALONE_OSX)
-			result = Platform.MacOSX;
+			result = Platform.macOS;
 #elif (UNITY_IPHONE || UNITY_IOS)
 			result = Platform.iOS;
 #elif (UNITY_TVOS)
 			result = Platform.tvOS;
+#elif (UNITY_VISIONOS)
+			result = Platform.visionOS;
 #elif (UNITY_ANDROID)
 			result = Platform.Android;
 #elif (UNITY_WSA_10_0)
@@ -912,7 +1076,7 @@ namespace RenderHeads.Media.AVProVideo
 
 #if UNITY_EDITOR
 #if (UNITY_EDITOR_OSX && UNITY_EDITOR_64)
-			result = _optionsMacOSX;
+			result = _options_macOS;
 #elif UNITY_EDITOR_WIN
 			result = _optionsWindows;
 #endif
@@ -922,11 +1086,13 @@ namespace RenderHeads.Media.AVProVideo
 #if (UNITY_STANDALONE_WIN)
 			result = _optionsWindows;
 #elif (UNITY_STANDALONE_OSX)
-			result = _optionsMacOSX;
+			result = _options_macOS;
 #elif (UNITY_IPHONE || UNITY_IOS)
-			result = _optionsIOS;
+			result = _options_iOS;
 #elif (UNITY_TVOS)
-			result = _optionsTVOS;
+			result = _options_tvOS;
+#elif (UNITY_VISIONOS)
+			result = _options_visionOS;
 #elif (UNITY_ANDROID)
 			result = _optionsAndroid;
 #elif (UNITY_WSA_10_0)
@@ -949,17 +1115,20 @@ namespace RenderHeads.Media.AVProVideo
 				case Platform.Windows:
 					result = _optionsWindows;
 					break;
-				case Platform.MacOSX:
-					result = _optionsMacOSX;
+				case Platform.macOS:
+					result = _options_macOS;
 					break;
 				case Platform.Android:
 					result = _optionsAndroid;
 					break;
 				case Platform.iOS:
-					result = _optionsIOS;
+					result = _options_iOS;
 					break;
 				case Platform.tvOS:
-					result = _optionsTVOS;
+					result = _options_tvOS;
+					break;
+				case Platform.visionOS:
+					result = _options_visionOS;
 					break;
 				case Platform.WindowsUWP:
 					result = _optionsWindowsUWP;
@@ -981,14 +1150,17 @@ namespace RenderHeads.Media.AVProVideo
 				case Platform.Windows:
 					result = "_optionsWindows";
 					break;
-				case Platform.MacOSX:
-					result = "_optionsMacOSX";
+				case Platform.macOS:
+					result = "_options_macOS";
 					break;
 				case Platform.iOS:
-					result = "_optionsIOS";
+					result = "_options_iOS";
 					break;
 				case Platform.tvOS:
-					result = "_optionsTVOS";
+					result = "_options_tvOS";
+					break;
+				case Platform.visionOS:
+					result = "_options_visionOS";
 					break;
 				case Platform.Android:
 					result = "_optionsAndroid";
@@ -1048,22 +1220,24 @@ namespace RenderHeads.Media.AVProVideo
 
 #if UNITY_EDITOR
 	#if UNITY_EDITOR_OSX
-			result = _optionsMacOSX.httpHeaders.ToValidatedString();
+			result = _options_macOS.httpHeaders.ToValidatedString();
 	#elif UNITY_EDITOR_WIN
 			result = _optionsWindows.httpHeaders.ToValidatedString();
 	#elif UNITY_EDITOR_LINUX
 	#endif
 #else
 	#if UNITY_STANDALONE_OSX
-			result = _optionsMacOSX.httpHeaders.ToValidatedString();
+			result = _options_macOS.httpHeaders.ToValidatedString();
 	#elif UNITY_STANDALONE_WIN
 			result = _optionsWindows.httpHeaders.ToValidatedString();
 	#elif UNITY_WSA_10_0
 			result = _optionsWindowsUWP.httpHeaders.ToValidatedString();
 	#elif UNITY_IOS || UNITY_IPHONE
-			result = _optionsIOS.httpHeaders.ToValidatedString();
+			result = _options_iOS.httpHeaders.ToValidatedString();
 	#elif UNITY_TVOS
-			result = _optionsTVOS.httpHeaders.ToValidatedString();
+			result = _options_tvOS.httpHeaders.ToValidatedString();
+	#elif UNITY_VISIONOS
+			result = _options_visionOS.httpHeaders.ToValidatedString();
 	#elif UNITY_ANDROID
 			result = _optionsAndroid.httpHeaders.ToValidatedString();
 	#elif UNITY_WEBGL
@@ -1074,7 +1248,7 @@ namespace RenderHeads.Media.AVProVideo
 			{
 				result = result.Trim();
 			}
-			
+
 			string globalHeaders = _httpHeaders.ToValidatedString();
 			if (!string.IsNullOrEmpty(globalHeaders))
 			{
@@ -1157,28 +1331,23 @@ namespace RenderHeads.Media.AVProVideo
 		}
 		#endif
 
-		#if (!UNITY_EDITOR && UNITY_ANDROID)
+#if (!UNITY_EDITOR && UNITY_ANDROID)
 		private static BaseMediaPlayer CreateMediaPlayer(OptionsAndroid options)
 		{
-			BaseMediaPlayer result = null;
-			// Initialise platform (also unpacks videos from StreamingAsset folder (inside a jar), to the persistent data path)
-			if (AndroidMediaPlayer.InitialisePlatform())
-			{
-				result = new AndroidMediaPlayer(options);
-			}
-			return result;
-		}
-		#endif
-
-		#if (UNITY_EDITOR_OSX) || (!UNITY_EDITOR && (UNITY_STANDALONE_OSX || UNITY_IPHONE || UNITY_IOS || UNITY_TVOS))
-		private static BaseMediaPlayer CreateMediaPlayer(OptionsApple options)
-		{
-			AppleMediaPlayer mediaPlayer = new AppleMediaPlayer(options);
+			PlatformMediaPlayer mediaPlayer = new PlatformMediaPlayer(options);
 			return mediaPlayer;
 		}
-		#endif
+#endif
 
-		#if (!UNITY_EDITOR && UNITY_WEBGL)
+#if (UNITY_EDITOR_OSX) || (!UNITY_EDITOR && (UNITY_STANDALONE_OSX || UNITY_IPHONE || UNITY_IOS || UNITY_TVOS || UNITY_VISIONOS || UNITY_ANDROID))
+		private static BaseMediaPlayer CreateMediaPlayer(OptionsApple options)
+		{
+			PlatformMediaPlayer mediaPlayer = new PlatformMediaPlayer(options);
+			return mediaPlayer;
+		}
+#endif
+
+#if (!UNITY_EDITOR && UNITY_WEBGL)
 		private static BaseMediaPlayer CreateMediaPlayer(OptionsWebGL options)
 		{
 			BaseMediaPlayer result = null;
@@ -1188,7 +1357,7 @@ namespace RenderHeads.Media.AVProVideo
 			}
 			return result;
 		}
-		#endif
+#endif
 
 		private static BaseMediaPlayer CreateMediaPlayerNull()
 		{
@@ -1201,11 +1370,13 @@ namespace RenderHeads.Media.AVProVideo
 
 	#if !AVPROVIDEO_FORCE_NULL_MEDIAPLAYER
 		#if (UNITY_EDITOR_OSX && UNITY_IOS) || (!UNITY_EDITOR && UNITY_IOS)
-			mediaPlayer = CreateMediaPlayer(_optionsIOS);
+			mediaPlayer = CreateMediaPlayer(_options_iOS);
 		#elif (UNITY_EDITOR_OSX && UNITY_TVOS) || (!UNITY_EDITOR && UNITY_TVOS)
-			mediaPlayer = CreateMediaPlayer(_optionsTVOS);
+			mediaPlayer = CreateMediaPlayer(_options_tvOS);
+		#elif (UNITY_EDITOR_OSX && UNITY_VISIONOS) || (!UNITY_EDITOR && UNITY_VISIONOS)
+			mediaPlayer = CreateMediaPlayer(_options_visionOS);
 		#elif (UNITY_EDITOR_OSX || (!UNITY_EDITOR && UNITY_STANDALONE_OSX))
-			mediaPlayer = CreateMediaPlayer(_optionsMacOSX);
+			mediaPlayer = CreateMediaPlayer(_options_macOS);
 		#elif (UNITY_EDITOR_WIN) || (!UNITY_EDITOR && UNITY_STANDALONE_WIN)
 			mediaPlayer = CreateMediaPlayer(_optionsWindows);
 		#elif (!UNITY_EDITOR && UNITY_WSA_10_0)
@@ -1273,6 +1444,15 @@ namespace RenderHeads.Media.AVProVideo
 			}
 		}
 
+		public bool IsUsingAndroidOESPath()
+		{
+			// Android OES mode is not available in the trial
+		#if !UNITY_EDITOR && UNITY_ANDROID
+			return !s_TrialVersion && (PlatformOptionsAndroid.textureFormat == MediaPlayer.OptionsAndroid.TextureFormat.YCbCr420_OES);
+		#else
+			return false;
+		#endif
+		}
 
 #region Save Frame To PNG
 #if UNITY_EDITOR || (!UNITY_EDITOR && (UNITY_STANDALONE_WIN || UNITY_STANDALONE_OSX))

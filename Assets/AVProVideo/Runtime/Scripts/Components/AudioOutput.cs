@@ -1,8 +1,8 @@
-﻿using UnityEngine;
+﻿//-----------------------------------------------------------------------------
+// Copyright 2015-2023 RenderHeads Ltd.  All rights reserved.
+//-----------------------------------------------------------------------------
 
-//-----------------------------------------------------------------------------
-// Copyright 2015-2021 RenderHeads Ltd.  All rights reserved.
-//-----------------------------------------------------------------------------
+using UnityEngine;
 
 namespace RenderHeads.Media.AVProVideo
 {
@@ -13,7 +13,7 @@ namespace RenderHeads.Media.AVProVideo
 	/// </summary>
 	[RequireComponent(typeof(AudioSource))]
 	[AddComponentMenu("AVPro Video/Audio Output", 400)]
-	[HelpURL("http://renderheads.com/products/avpro-video/")]
+	[HelpURL("https://www.renderheads.com/products/avpro-video/")]
 	public class AudioOutput : MonoBehaviour
 	{
 		public enum AudioOutputMode
@@ -26,6 +26,8 @@ namespace RenderHeads.Media.AVProVideo
 		[SerializeField] AudioOutputMode _audioOutputMode = AudioOutputMode.MultipleChannels;
 		[HideInInspector, SerializeField] int _channelMask = 0xffff;
 		[SerializeField] bool _supportPositionalAudio = false;
+
+		private int _mediaPlayerInstanceID = 0;
 
 		public MediaPlayer Player
 		{
@@ -55,7 +57,15 @@ namespace RenderHeads.Media.AVProVideo
 
 		void Start()
 		{
+			AudioSettings.OnAudioConfigurationChanged += OnAudioConfigurationChanged;
 			ChangeMediaPlayer(_mediaPlayer);
+		}
+
+		void OnAudioConfigurationChanged(bool deviceChanged)
+		{
+			if (_mediaPlayer == null || _mediaPlayer.Control == null)
+				return;
+			_mediaPlayer.Control.AudioConfigurationChanged(deviceChanged);
 		}
 
 		void OnDestroy()
@@ -83,7 +93,9 @@ namespace RenderHeads.Media.AVProVideo
 			{
 				_mediaPlayer.AudioSource = null;
 				_mediaPlayer.Events.RemoveListener(OnMediaPlayerEvent);
+				AudioOutputManager.Instance.RemovePlayerInstance(_mediaPlayerInstanceID);
 				_mediaPlayer = null;
+				_mediaPlayerInstanceID = 0;
 			}
 
 			_mediaPlayer = newPlayer;
@@ -91,6 +103,8 @@ namespace RenderHeads.Media.AVProVideo
 			{
 				_mediaPlayer.Events.AddListener(OnMediaPlayerEvent);
 				_mediaPlayer.AudioSource = _audioSource;
+				_mediaPlayerInstanceID = _mediaPlayer.GetInstanceID();
+				AudioOutputManager.Instance.AddPlayerInstance(_mediaPlayerInstanceID);
 			}
 
 			if (_supportPositionalAudio)
@@ -144,10 +158,10 @@ namespace RenderHeads.Media.AVProVideo
 			}
 		}
 
-#if (UNITY_EDITOR_WIN || UNITY_EDITOR_OSX) || (!UNITY_EDITOR && (UNITY_STANDALONE_WIN || UNITY_WSA_10_0 || UNITY_STANDALONE_OSX || UNITY_IOS || UNITY_TVOS || UNITY_ANDROID))
+#if (UNITY_EDITOR_WIN || UNITY_EDITOR_OSX) || (!UNITY_EDITOR && (UNITY_STANDALONE_WIN || UNITY_WSA_10_0 || UNITY_STANDALONE_OSX || UNITY_IOS || UNITY_TVOS || UNITY_VISIONOS || UNITY_ANDROID))
 		void OnAudioFilterRead(float[] audioData, int channelCount)
 		{
-			AudioOutputManager.Instance.RequestAudio(this, _mediaPlayer, audioData, channelCount, _channelMask, _audioOutputMode, _supportPositionalAudio);
+			AudioOutputManager.Instance.RequestAudio(this, _mediaPlayer, _mediaPlayerInstanceID, audioData, channelCount, _channelMask, _audioOutputMode, _supportPositionalAudio);
 		}
 #endif
 	}

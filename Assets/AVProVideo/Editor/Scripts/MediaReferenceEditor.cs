@@ -186,7 +186,7 @@ namespace RenderHeads.Media.AVProVideo.Editor
 			#elif UNITY_EDITOR_OSX
 			{
 				MediaPlayer.OptionsApple options = new MediaPlayer.OptionsApple(MediaPlayer.OptionsApple.TextureFormat.BGRA, MediaPlayer.OptionsApple.Flags.None);
-				_thumbnailPlayer = new AppleMediaPlayer(options);
+				_thumbnailPlayer = new PlatformMediaPlayer(options);
 			}
 			#endif
 
@@ -313,7 +313,7 @@ namespace RenderHeads.Media.AVProVideo.Editor
 							{
 								scaleMode = ScaleMode.ScaleAndCrop;
 							}
-							VideoRender.DrawTexture(new Rect(0f, 0f, 128f, 128f), _thumbnailPlayer.GetTexture(), scaleMode, _thumbnailPlayer.GetTextureAlphaPacking(), materialResolve);
+							VideoRender.DrawTexture(new Rect(0f, 0f, 128f, 128f), _thumbnailPlayer.GetTexture(), scaleMode, _thumbnailPlayer.GetTextureAlphaPacking(), _thumbnailPlayer.GetTexturePixelAspectRatio(), materialResolve);
 							RenderTexture.active = prev;
 
 							Material.DestroyImmediate(materialResolve); materialResolve = null;

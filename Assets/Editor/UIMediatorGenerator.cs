@@ -282,6 +282,10 @@ public class UIMediatorGenerator
         }
         sb.AppendLine("    #endregion");
         sb.AppendLine();
+        sb.AppendLine("    #region Extra UI Components");
+        sb.AppendLine("    // Place custom MonoBehaviour references here (manually added)");
+        sb.AppendLine("    #endregion");
+        sb.AppendLine();
 
         // ── constructor ──
         sb.AppendLine($"    public {className}(string mediatorName, GameObject viewComponent, int layer, bool isReuseView = false)");
@@ -328,6 +332,7 @@ public class UIMediatorGenerator
                     sb.AppendLine("        }");
                 }
             }
+            sb.AppendLine("        InitClickEventsExtra();");
             sb.AppendLine("    }");
             sb.AppendLine();
         }
@@ -345,6 +350,16 @@ public class UIMediatorGenerator
                 sb.AppendLine();
             }
         }
+
+        // ── Extra methods ──
+        sb.AppendLine("    protected virtual void InitUIComponentsExtra()");
+        sb.AppendLine("    {");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    private void InitClickEventsExtra()");
+        sb.AppendLine("    {");
+        sb.AppendLine("    }");
+        sb.AppendLine();
 
         // ── #region Update (Optional) ──
         sb.AppendLine("    #region Update (Optional)");
@@ -370,6 +385,7 @@ public class UIMediatorGenerator
     //   2. InitUIComponents() method body
     //   3. InitClickEvents() method body
     //   4. Appends new button callback stubs (only if not already present)
+    //   5. Ensures Extra region / methods exist (only if missing)
     // Everything else in the file is left untouched.
     // ──────────────────────────────────────────────
     private static string UpdateExistingScript(string source, List<BindInfo> binds)
@@ -420,7 +436,109 @@ public class UIMediatorGenerator
             }
         }
 
+        // ── 5. Ensure Extra region / methods exist (only add if missing) ──
+        source = EnsureExtraRegion(source);
+        source = EnsureExtraMethods(source);
+
         return source;
+    }
+
+    /// <summary>
+    /// Append #region Extra UI Components after #endregion of UI Components, if not present.
+    /// </summary>
+    private static string EnsureExtraRegion(string source)
+    {
+        if (source.Contains("#region Extra UI Components"))
+            return source;
+
+        // Find the first #endregion after #region UI Components
+        string pattern = @"([ \t]*#region UI Components[ \t]*\r?\n.*?[ \t]*#endregion)";
+        return Regex.Replace(source, pattern,
+            m => m.Value + "\n\n    #region Extra UI Components\n    // Place custom MonoBehaviour references here (manually added)\n    #endregion",
+            RegexOptions.Singleline);
+    }
+
+    /// <summary>
+    /// Ensure InitUIComponentsExtra() and InitClickEventsExtra() exist.
+    /// If the Extra call is missing inside the method, append it.
+    /// If the Extra method stub is missing from the file, append it at the end.
+    /// </summary>
+    private static string EnsureExtraMethods(string source)
+    {
+        // ── InitUIComponentsExtra() call inside InitUIComponents() ──
+        if (!source.Contains("InitUIComponentsExtra()"))
+        {
+            source = AppendCallInsideMethod(source, "InitUIComponents", "        InitUIComponentsExtra();");
+        }
+
+        // ── InitClickEventsExtra() call inside InitClickEvents() ──
+        if (Regex.IsMatch(source, @"private void InitClickEvents\s*\(") && !source.Contains("InitClickEventsExtra()"))
+        {
+            source = AppendCallInsideMethod(source, "InitClickEvents", "        InitClickEventsExtra();");
+        }
+
+        // ── Method stubs at end of class ──
+        if (!Regex.IsMatch(source, @"protected virtual void InitUIComponentsExtra\s*\("))
+        {
+            source = AppendStubBeforeClosingBrace(source, "    protected virtual void InitUIComponentsExtra()\n    {\n    }\n");
+        }
+        if (!Regex.IsMatch(source, @"private void InitClickEventsExtra\s*\(") && Regex.IsMatch(source, @"private void InitClickEvents\s*\("))
+        {
+            source = AppendStubBeforeClosingBrace(source, "    private void InitClickEventsExtra()\n    {\n    }\n");
+        }
+
+        return source;
+    }
+
+    /// <summary>
+    /// Append a line of code before the closing brace of a method body.
+    /// </summary>
+    private static string AppendCallInsideMethod(string source, string methodName, string callLine)
+    {
+        // Find method: "void MethodName(...)" followed by opening brace
+        string sigPattern = $@"([ \t]*(?:protected override|private|public|internal)?[ \t]*\w+[ \t]+{Regex.Escape(methodName)}\s*\([^)]*\)\s*\r?\n[ \t]*\{{)";
+        Match m = Regex.Match(source, sigPattern);
+        if (!m.Success) return source;
+
+        int bodyStart = m.Index + m.Length;
+        int braceCount = 1;
+        int i = bodyStart;
+        while (i < source.Length && braceCount > 0)
+        {
+            if (source[i] == '{') braceCount++;
+            else if (source[i] == '}') braceCount--;
+            i++;
+        }
+        // i now points past the matching '}'. The closing brace is on its own line.
+        // Walk back to the line start of the closing '}'
+        int closeBracePos = i - 1;
+        while (closeBracePos > bodyStart && source[closeBracePos] != '\n')
+            closeBracePos--;
+        if (source[closeBracePos] == '\n') closeBracePos++;
+
+        // Insert the call line right before the closing brace line
+        string before = source.Substring(0, closeBracePos);
+        string after = source.Substring(closeBracePos);
+        return before + callLine + "\n" + after;
+    }
+
+    /// <summary>
+    /// Append a method stub before the last '}' (closing class brace).
+    /// </summary>
+    private static string AppendStubBeforeClosingBrace(string source, string stub)
+    {
+        // Find the last '}' in the file (class closing brace)
+        int lastBrace = source.LastIndexOf('}');
+        if (lastBrace < 0) return source;
+
+        // Walk back to the line start of that brace
+        int lineStart = lastBrace;
+        while (lineStart > 0 && source[lineStart - 1] != '\n')
+            lineStart--;
+
+        string before = source.Substring(0, lineStart);
+        string after = source.Substring(lineStart);
+        return before + stub + "\n" + after;
     }
 
     // Build the lines that go inside #region UI Components (no region tags)
@@ -481,6 +599,7 @@ public class UIMediatorGenerator
         }
         if (callInitClickEvents)
             sb.AppendLine("        InitClickEvents();");
+        sb.AppendLine("        InitUIComponentsExtra();");
         return sb.ToString();
     }
 
@@ -783,6 +902,10 @@ public class UIMediatorGenerator
         }
         sb.AppendLine("    #endregion");
         sb.AppendLine();
+        sb.AppendLine("    #region Extra UI Components");
+        sb.AppendLine("    // Place custom MonoBehaviour references here (manually added)");
+        sb.AppendLine("    #endregion");
+        sb.AppendLine();
 
         // Data fields
         sb.AppendLine("    private System.Action _onClickCallback;");
@@ -815,6 +938,7 @@ public class UIMediatorGenerator
                 sb.AppendLine($"            {b.varName}.onClick.AddListener(OnItemClick);");
             }
         }
+        sb.AppendLine("        RegisterUIEventsExtra();");
         sb.AppendLine("    }");
         sb.AppendLine();
 
@@ -831,6 +955,7 @@ public class UIMediatorGenerator
             }
         }
         sb.AppendLine("        base.UnRegisterUIEvents();");
+        sb.AppendLine("        UnRegisterUIEventsExtra();");
         sb.AppendLine("    }");
         sb.AppendLine();
 
@@ -866,6 +991,20 @@ public class UIMediatorGenerator
         sb.AppendLine("    private void OnItemClick()");
         sb.AppendLine("    {");
         sb.AppendLine("        _onClickCallback?.Invoke();");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+
+        // Extra methods
+        sb.AppendLine("    protected virtual void InitUIComponentsExtra()");
+        sb.AppendLine("    {");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    protected virtual void RegisterUIEventsExtra()");
+        sb.AppendLine("    {");
+        sb.AppendLine("    }");
+        sb.AppendLine();
+        sb.AppendLine("    protected virtual void UnRegisterUIEventsExtra()");
+        sb.AppendLine("    {");
         sb.AppendLine("    }");
         sb.AppendLine();
 

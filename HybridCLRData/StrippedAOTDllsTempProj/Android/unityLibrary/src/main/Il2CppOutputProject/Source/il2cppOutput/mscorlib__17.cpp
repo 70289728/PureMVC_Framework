@@ -14351,6 +14351,12 @@ IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR String_t* Marshal_PtrToStringUni_mA30F3D8587F
 	using namespace il2cpp::icalls;
 	return ((Marshal_PtrToStringUni_mA30F3D8587F2E51F70DF5F30A3C2910CBDAB6F20_ftn)mscorlib::System::Runtime::InteropServices::Marshal::PtrToStringUni_mscorlib_System_String_mscorlib_System_IntPtr) (___0_ptr);
 }
+IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR String_t* Marshal_PtrToStringUni_mF3D662C7F7255D6DDA07416FA6520886F66D0070 (intptr_t ___0_ptr, int32_t ___1_len, const RuntimeMethod* method) 
+{
+	typedef String_t* (*Marshal_PtrToStringUni_mF3D662C7F7255D6DDA07416FA6520886F66D0070_ftn) (intptr_t, int32_t);
+	using namespace il2cpp::icalls;
+	return ((Marshal_PtrToStringUni_mF3D662C7F7255D6DDA07416FA6520886F66D0070_ftn)mscorlib::System::Runtime::InteropServices::Marshal::PtrToStringUni_mscorlib_System_String_mscorlib_System_IntPtr_mscorlib_System_Int32) (___0_ptr, ___1_len);
+}
 IL2CPP_EXTERN_C IL2CPP_METHOD_ATTR RuntimeObject* Marshal_PtrToStructure_m235E141E21BFB69A01B07DDDF1702BA7D5723AC3 (intptr_t ___0_ptr, Type_t* ___1_structureType, const RuntimeMethod* method) 
 {
 	typedef RuntimeObject* (*Marshal_PtrToStructure_m235E141E21BFB69A01B07DDDF1702BA7D5723AC3_ftn) (intptr_t, Type_t*);

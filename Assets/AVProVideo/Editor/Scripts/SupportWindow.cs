@@ -1,6 +1,11 @@
 ﻿
 using UnityEngine;
 using UnityEditor;
+using System.Text;
+using System.IO;
+using System.Collections.Generic;
+using System.Linq;
+using System;
 
 //-----------------------------------------------------------------------------
 // Copyright 2016-2021 RenderHeads Ltd.  All rights reserved.
@@ -62,7 +67,7 @@ namespace RenderHeads.Media.AVProVideo.Editor
 		private Vector2 _scroll = Vector2.zero;
 
 		private int _selectionIndex = 0;
-		private static string[] _gridNames = { "Help Resources", "Ask for Help", "FAQ" };
+		private static string[] _gridNames = { "Help Resources", "Ask for Help", "Update v2.x to v3.x" };
 
 		[MenuItem("Window/AVPro Video Support")]
 		public static void Init()
@@ -259,10 +264,6 @@ namespace RenderHeads.Media.AVProVideo.Editor
 				GUILayout.FlexibleSpace();
 				GUILayout.EndHorizontal();
 			}
-			else if (_selectionIndex == 2)
-			{
-				GUILayout.Label("Coming soon...");
-			}
 			else if (_selectionIndex == 1)
 			{
 				GUILayout.Label("Please fill out these fields when sending us a new issue.\nThis makes it much easier and faster to resolve the issue.", EditorStyles.wordWrappedLabel);
@@ -335,6 +336,55 @@ namespace RenderHeads.Media.AVProVideo.Editor
 				GUILayout.FlexibleSpace();
 				GUILayout.EndHorizontal();
 			}
+			else if (_selectionIndex == 2)
+			{
+				GUILayout.Label("There are a number of files/folders that need to be removed going from AVPro Video version 2.x to AVPro Video v3.x in order for v3.x to build and run correctly.\n\nIn order to complete a smooth upgrade a project using AVPro Video v2.x to v3.x please follow the following steps:", EditorStyles.wordWrappedLabel);
+				GUILayout.Space(16f);
+
+				GUILayout.BeginHorizontal();
+				GUILayout.Label("1) Import the latest AVPro Video v3.x asset bundle into a project that already contains AVPro Video v2.x", EditorStyles.wordWrappedLabel);
+				GUILayout.FlexibleSpace();
+				GUILayout.EndHorizontal();
+
+				GUILayout.BeginHorizontal();
+				GUILayout.Label("2) Click the update button");
+				if (GUILayout.Button("Update", GUILayout.ExpandWidth(true)))
+				{
+					List<SFileToDelete> aFilesToDelete = new List<SFileToDelete>();
+
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer.aar", "d04cd71ba09f0a548ac774e50236a6f7", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer-common.aar", "782210c1836944347b3b8315635ef044", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer-container.aar", "2232bec870b56e04aa0107d97204456e", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer-core.aar", "782210c1836944347b3b8315658ef044", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer-dash.aar", "d06cd71ba09f0a548ac774e50236a6f7", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer-database.aar", "a35ee71df09a0a348ac774e75237a6a1", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer-datasource.aar", "d06cd71df09a0a348ac774e75237a6a1", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer-decoder.aar", "d06cd71ba09f0a548ac774e75236a6a1", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer-extractor.aar", "782210c2926744347b3b8315658ef044", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer-hls.aar", "d07cd71ba09f0a548ac774e50236a6f7", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer-rtsp.aar", "782210a1816945347b3b8315658ef052", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/exoplayer-smoothstreaming.aar", "d08cd71ba09f0a548ac774e50236a6f7", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/Android/extension-rtmp.aar", "782210c1836944347b3b8315658ef041", false) );
+					//
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/iOS/AVProVideo.framework", "2a1facf97326449499b63c03811b1ab2", true) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/iOS/AVProVideoBootstrap.m", "4df32662530a57c4f83b79e6313690dc", false) );
+					//
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/tvOS/AVProVideo.framework", "bcf659e3a94d748d6a100d5531540d1a", true) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Plugins/tvOS/AVProVideoBootstrap.m", "154f23675acd6c54e8667de25ac31b67", false) );
+					//
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Scripts/Internal/Players/AndroidMediaPlayer.cs", "80eb525dd677aa440823910b09b23ae0", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Scripts/Internal/Players/AppleMediaPlayer.cs", "3f68628a1ef6349648e502d1c66b5114", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Scripts/Internal/Players/AppleMediaPlayer+Native.cs", "0bf374b5848b649e6b3840fe1dc03cd2", false) );
+					aFilesToDelete.Add( new SFileToDelete( "Assets/AVProVideo/Runtime/Scripts/Internal/Players/AppleMediaPlayerExtensions.cs", "e27ea5523e11f44c09e8d368eb1f2983", false) );
+
+					int iNumberFilesDeleted = DeleteFiles_V2_To_V3(aFilesToDelete, new[] { ".aar", ".m", ".cs" } );
+
+					EditorUtility.DisplayDialog("Complete", "Update from AVPro Video v2.x to v3.x is complete.\n\n" + iNumberFilesDeleted + " files/folders were removed in the process", "ok");
+				}
+				GUI.color = Color.white;
+				GUILayout.FlexibleSpace();
+				GUILayout.EndHorizontal();
+			}
 			//GUILayout.EndVertical();
 
 			GUILayout.FlexibleSpace();
@@ -344,6 +394,101 @@ namespace RenderHeads.Media.AVProVideo.Editor
 				this.Close();
 			}			
 		}
+
+		private class SFileToDelete
+		{
+			public SFileToDelete( string filename, string guid, bool bDirectory )
+			{
+				m_Filename = filename;
+				m_guid = guid;
+				m_FullPath = null;
+				m_bIsDirectory = bDirectory;
+			}
+
+			public string	m_Filename;
+			public string	m_guid;
+			public string	m_FullPath;
+			public bool		m_bIsDirectory;
+		};
+
+		private int DeleteFiles_V2_To_V3( List<SFileToDelete> aFilesToDelete, string[] allowedExtensions )
+		{
+			int iNumRemoved = 0;
+
+			try
+			{
+				// Folders first
+				IEnumerable<string> aAllFoders = Directory.GetDirectories( Application.dataPath, "*", SearchOption.AllDirectories );
+				foreach( string directoryPath in aAllFoders )
+				{
+					Uri relativeDirectory = (new Uri(Application.dataPath)).MakeRelativeUri(new Uri(directoryPath));
+					UnityEngine.Object asssetObject = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>( relativeDirectory.ToString() );
+					if(asssetObject)
+					{
+						string guid;
+						long file;
+						if( AssetDatabase.TryGetGUIDAndLocalFileIdentifier( asssetObject, out guid, out file ) )
+						{
+							// Is this a file we want to delete?
+							foreach( SFileToDelete sFileToDelete in aFilesToDelete )
+							{
+								if( !string.IsNullOrEmpty( sFileToDelete.m_guid ) &&
+									sFileToDelete.m_bIsDirectory && 
+									sFileToDelete.m_guid.Equals( guid ) )
+								{
+									// A hit, delete
+									Directory.Delete( directoryPath, true );
+									File.Delete( directoryPath + ".meta" );
+
+									iNumRemoved += 2;
+								}
+							}
+						}
+					}
+				}
+
+				// Files
+				IEnumerable<string> aAllFiles = Directory.GetFiles( Application.dataPath, "*.*", SearchOption.AllDirectories ).Where(file => allowedExtensions.Any(file.ToLower().EndsWith));
+				foreach( string filePath in aAllFiles )
+				{
+					Uri relativeFilename = (new Uri(Application.dataPath)).MakeRelativeUri(new Uri(filePath));
+					UnityEngine.Object asssetObject = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>( relativeFilename.ToString() );
+					if(asssetObject)
+					{
+						string guid;
+						long file;
+						if( AssetDatabase.TryGetGUIDAndLocalFileIdentifier( asssetObject, out guid, out file ) )
+						{
+							// Is this a file we want to delete?
+							foreach( SFileToDelete sFileToDelete in aFilesToDelete )
+							{
+								if( !string.IsNullOrEmpty( sFileToDelete.m_guid ) && 
+									!sFileToDelete.m_bIsDirectory && 
+									sFileToDelete.m_guid.Equals( guid ) )
+								{
+									// A hit, delete
+									File.Delete( filePath );
+									File.Delete( filePath + ".meta" );
+
+									iNumRemoved += 2;
+								}
+							}
+						}
+					}
+				}
+			}
+			catch (UnauthorizedAccessException UAEx)
+			{
+				Console.WriteLine(UAEx.Message);
+			}
+			catch (PathTooLongException PathEx)
+			{
+				Console.WriteLine(PathEx.Message);
+			}
+
+			return iNumRemoved;
+		}
+
 
 		private Rect buttonRect;
 

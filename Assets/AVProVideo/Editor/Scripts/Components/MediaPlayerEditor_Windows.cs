@@ -37,6 +37,7 @@ namespace RenderHeads.Media.AVProVideo.Editor
 		private readonly static FieldDescription _optionTextureMips = new FieldDescription(".useTextureMips", new GUIContent("Generate Mipmaps", "Automatically create mip-maps for the texture to reducing aliasing when texture is scaled down"));
 		private readonly static FieldDescription _option10BitTextures = new FieldDescription(".use10BitTextures", new GUIContent("Use 10-Bit Textures", "Provides a hint to the decoder to use 10-bit textures - allowing more quality for videos encoded with a 10-bit profile"));
 		private readonly static FieldDescription _optionUseHardwareDecoding = new FieldDescription(".useHardwareDecoding", new GUIContent("Hardware Decoding"));
+		private readonly static FieldDescription _optionUseRendererSync = new FieldDescription(".useRendererSync", new GUIContent("Renderer Sync", "Ensure synchronisation between video textures and Unity rendering - alleviates potential playback artifacts"));
 		private readonly static FieldDescription _optionUseStereoDetection = new FieldDescription(".useStereoDetection", new GUIContent("Use Stereo Detection", "Disable if no stereo detection is required"));
 		private readonly static FieldDescription _optionUseTextTrackSupport = new FieldDescription(".useTextTrackSupport", new GUIContent("Use Text Tracks", "Disable if no text tracks are required"));
 		private readonly static FieldDescription _optionUseAudioDelay = new FieldDescription(".useAudioDelay", new GUIContent("Use Audio Delay", "Allows audio to be offset"));
@@ -49,9 +50,10 @@ namespace RenderHeads.Media.AVProVideo.Editor
 		private readonly static FieldDescription _optionCustomMovParser = new FieldDescription(".useCustomMovParser", new GUIContent("Use Custom MOV Parser", "For playback of Hap and NotchLC media to handle high bit-rates"));
 		private readonly static FieldDescription _optionParallelFrameCount = new FieldDescription(".parallelFrameCount", new GUIContent("Parallel Frame Count", "Number of frames to decode in parallel via multi-threading.  Higher values increase latency but can improve performance for demanding videos."));
 		private readonly static FieldDescription _optionPrerollFrameCount = new FieldDescription(".prerollFrameCount", new GUIContent("Preroll Frame Count", "Number of frames to pre-decode before playback starts.  Higher values increase latency but can improve performance for demanding videos."));
-		private readonly static FieldDescription _optionAudioOutput = new FieldDescription(".audioOutput", new GUIContent("Audio Output"));
+		private readonly static FieldDescription _optionAudioOutput = new FieldDescription("._audioMode", new GUIContent("Audio Output"));
 		private readonly static FieldDescription _optionAudio360ChannelMode = new FieldDescription(".audio360ChannelMode", new GUIContent("Channel Mode", "Specifies what channel mode Facebook Audio 360 needs to be initialised with"));
-		private readonly static FieldDescription _optionStartMaxBitrate = new FieldDescription(".startWithHighestBitrate", new GUIContent("Start Max Bitrate"));
+        private readonly static FieldDescription _optionAudio360LatencyMS = new FieldDescription(".audio360LatencyMS", new GUIContent("Audio Latency (ms)", "Specifies audio latency, in milliseconds, that Facebook Audio 360 needs to be initialised with. -ve will play audio sooner, +ve later."));
+        private readonly static FieldDescription _optionStartMaxBitrate = new FieldDescription(".startWithHighestBitrate", new GUIContent("Start Max Bitrate"));
 		private readonly static FieldDescription _optionUseLowLiveLatency = new FieldDescription(".useLowLiveLatency", new GUIContent("Low Live Latency"));
 		private readonly static FieldDescription _optionHintAlphaChannel = new FieldDescription(".hintAlphaChannel", new GUIContent("Alpha Channel Hint", "If a video is detected as 32-bit, use or ignore the alpha channel"));
 		private readonly static FieldDescription _optionForceAudioOutputDeviceName = new FieldDescription(".forceAudioOutputDeviceName", new GUIContent("Force Audio Output Device Name", "Useful for VR when you need to output to the VR audio device"));
@@ -93,6 +95,7 @@ namespace RenderHeads.Media.AVProVideo.Editor
 				GUILayout.Label("Media Foundation API Options", EditorStyles.boldLabel);
 				{
 					DisplayPlatformOption(optionsVarName, _optionUseHardwareDecoding);
+					DisplayPlatformOption(optionsVarName, _optionUseRendererSync);
 				}
 				{
 					DisplayPlatformOption(optionsVarName, _optionLowLatency);
@@ -268,6 +271,7 @@ namespace RenderHeads.Media.AVProVideo.Editor
 				GUILayout.Label("Media Foundation API Options", EditorStyles.boldLabel);
 
 				DisplayPlatformOption(optionsVarName, _optionUseHardwareDecoding);
+				DisplayPlatformOption(optionsVarName, _optionUseRendererSync);
 				
 				{
 					SerializedProperty propUseTextureMips = DisplayPlatformOption(optionsVarName, _optionTextureMips);

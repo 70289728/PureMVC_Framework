@@ -1,14 +1,14 @@
 {
-    "version": "1.0.3",
-    "buildTime": "2026-05-29T12:51:50",
+    "version": "1.0.6",
+    "buildTime": "2026-05-29T15:26:32",
     "platform": "Android",
     "bundles": [
         {
             "name": "base_base_prefab.ab",
-            "md5": "1041483b0064cd3c0996882bfab88473",
-            "sha256": "7ed24be5cbacdfd30ad41419c7c6695c76c2cc373572ea1e447b9fedaada94d6",
-            "crc32": "9771FA78",
-            "size": 29071,
+            "md5": "4e70f8bc66398541ea0964b0853efc2f",
+            "sha256": "8a1835efff71fe901cffdba72410f7de3d0bb5e195120e560a764a510a5cb558",
+            "crc32": "BFC47751",
+            "size": 29270,
             "layer": 0,
             "compression": 0,
             "resourceType": 1,
@@ -59,7 +59,7 @@
         },
         {
             "name": "dll/HotUpdateAssembly.dll",
-            "md5": "02266394132e2a48ddd7767c48ae242a",
+            "md5": "b2ed967050d6187d5bec5fd0f369165d",
             "sha256": "",
             "crc32": "",
             "size": 27648,

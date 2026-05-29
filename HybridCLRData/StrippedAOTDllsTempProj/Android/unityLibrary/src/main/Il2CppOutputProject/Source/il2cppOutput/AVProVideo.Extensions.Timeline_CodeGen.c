@@ -21,8 +21,8 @@ static Il2CppMethodPointer s_methodPointers[2] =
 };
 static const int32_t s_InvokerIndices[2] = 
 {
-	10262,
-	6818,
+	10324,
+	6860,
 };
 IL2CPP_EXTERN_C const Il2CppCodeGenModule g_AVProVideo_Extensions_Timeline_CodeGenModule;
 const Il2CppCodeGenModule g_AVProVideo_Extensions_Timeline_CodeGenModule = 
