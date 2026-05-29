@@ -16,6 +16,7 @@ public static class NetworkMessageHelper
     /// </summary>
     public static void SendLogin(long accountId, string password)
     {
+        NetworkManager.CacheLoginCredentials(accountId, password);
         var msg = new LoginMessageC2S
         {
             AccountId = accountId,

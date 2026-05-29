@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 /// <summary>
@@ -13,8 +14,8 @@ public class ShopProxy : ProxyBase
     private List<ShopItem> _shopConfig;
     private Dictionary<int, int> _buyRecords = new Dictionary<int, int>();
 
-    // Track pending buy request for request-response matching
-    private int _pendingShopItemId = 0;
+    // Track pending buy requests for request-response matching (supports concurrent buys)
+    private readonly HashSet<int> _pendingShopItemIds = new HashSet<int>();
 
     public ShopProxy() : base(NAME, null) { }
 
@@ -88,7 +89,7 @@ public class ShopProxy : ProxyBase
     /// </summary>
     public void BuyItem(int shopItemId)
     {
-        _pendingShopItemId = shopItemId;
+        _pendingShopItemIds.Add(shopItemId);
         NetworkMessageHelper.SendShopBuy(shopItemId);
     }
 
@@ -132,11 +133,11 @@ public class ShopProxy : ProxyBase
         }
 
         // Client-side validation #2: request-response matching
-        if (_pendingShopItemId != 0 && resp.ShopItemId != _pendingShopItemId)
+        if (_pendingShopItemIds.Count > 0 && !_pendingShopItemIds.Contains(resp.ShopItemId))
         {
-            Log.w($"Shop buy response mismatch: expected id={_pendingShopItemId}, got id={resp.ShopItemId}", NAME);
+            Log.w($"Shop buy response mismatch: expected one of [{string.Join(",", _pendingShopItemIds)}], got id={resp.ShopItemId}", NAME);
         }
-        _pendingShopItemId = 0;
+        _pendingShopItemIds.Remove(resp.ShopItemId);
 
         if (resp.Rst.Result)
         {

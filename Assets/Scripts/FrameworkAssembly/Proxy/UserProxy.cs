@@ -66,6 +66,22 @@ public class UserProxy : ProxyBase
         if (resp.Rst.Result)
         {
             NetworkManager.CurrentAccountId = resp.AccountId;
+
+            // Complete reconnect handshake if this login was triggered by reconnect flow.
+            // IMPORTANT: do NOT fire LOGIN_SUCCESS/LOGIN_FAILED for reconnects —
+            // those trigger LoginSuccessCommand which opens UIMain/UILogin and would break
+            // the current UI state.
+            var netProxy = GetProxy<NetworkProxy>(NetworkProxy.NAME);
+            if (netProxy != null && netProxy.IsReconnecting)
+            {
+                Log.d($"Reconnect login success for account {resp.AccountId}. Completing handshake.", NAME);
+                netProxy.ResetReconnectState();
+                NetworkManager.Instance.FlushPendingMessages();
+                NetworkMessageHelper.SendBagList();
+                Facade.SendNotification(NetworkNotificationConst.NETWORK_RECONNECTED);
+                return;
+            }
+
             // Sync player data from server
             if (resp.PlayerData != null && !string.IsNullOrEmpty(resp.PlayerData.PlayerName))
             {
@@ -84,6 +100,15 @@ public class UserProxy : ProxyBase
         }
         else
         {
+            // Reconnect login failed — reset state and discard pending messages
+            var netProxy = GetProxy<NetworkProxy>(NetworkProxy.NAME);
+            if (netProxy != null && netProxy.IsReconnecting)
+            {
+                Log.w($"Reconnect login failed: errCode={resp.Rst.ErrCode}. Clearing pending messages.", NAME);
+                netProxy.ResetReconnectState();
+                NetworkManager.Instance.ClearPendingMessages();
+                return;
+            }
             SendNotification(NotificationConst.LOGIN_FAILED, $"Login failed, errCode={resp.Rst.ErrCode}");
         }
     }
@@ -117,14 +142,36 @@ public class UserProxy : ProxyBase
         }
     }
 
+    /// <summary>
+    /// Level exp thresholds loaded from level.json config.
+    /// TODO: Load via ConfigManager once Level type is accessible in FrameworkAssembly.
+    /// Currently Level.cs lives in HotUpdateAssembly (export tool target), so we mirror
+    /// the exp values here to keep level-up logic consistent with the Excel config.
+    /// Combat stats (AddAtk, AddHp) are not in the Excel config and remain formula-based.
+    /// </summary>
+    private static readonly Dictionary<int, int> LevelExpThresholds = new Dictionary<int, int>
+    {
+        {1,100},{2,150},{3,250},{4,400},{5,650},{6,900},{7,1300},{8,1800},{9,2400},{10,3100},
+        {11,4000},{12,5000},{13,6200},{14,7500},{15,9000},{16,10600},{17,12400},{18,14300},{19,16400},{20,18600},
+        {21,21000},{22,23500},{23,26200},{24,29000},{25,32000},{26,35400},{27,38900},{28,42600},{29,46500},{30,50600},
+        {31,55000},{32,59600},{33,64500},{34,69600},{35,75000},{36,80600},{37,86500},{38,92600},{39,99000},{40,105600},
+        {41,112500},{42,119600},{43,127000},{44,134600},{45,142500},{46,150600},{47,159000},{48,167600},{49,176500},{50,185600},
+        {51,195000},{52,204600},{53,214500},{54,224600},{55,235000},{56,245600},{57,256500},{58,267600},{59,279000},{60,290600},
+        {61,302500},{62,314600},{63,327000},{64,339600},{65,352500},{66,365600},{67,379000},{68,392600},{69,406500},{70,420600},
+        {71,435000},{72,449600},{73,464500},{74,479600},{75,495000},{76,510600},{77,526500},{78,542600},{79,559000},{80,575600},
+        {81,592500},{82,609600},{83,627000},{84,644600},{85,662500},{86,680600},{87,699000},{88,717600},{89,736500},{90,755600},
+        {91,775000},{92,794600},{93,814500},{94,834600},{95,855000},{96,875600},{97,896500},{98,917600},{99,939000},{100,960600}
+    };
+
     private void InitLevelConfigs()
     {
         for (int i = 1; i <= 100; i++)
         {
+            int expValue = LevelExpThresholds.TryGetValue(i, out int v) ? v : i * 100;
             _levelCfgs.Add(new LevelConfig
             {
                 Level = i,
-                NeedExp = i * 100,
+                NeedExp = expValue,
                 AddAtk = i + 2,
                 AddHp = i * 5 + 10
             });

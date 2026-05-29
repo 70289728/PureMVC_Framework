@@ -230,7 +230,6 @@ public class GameMain : MonoBehaviour
         // Init, GameStart sends STARTUP → HotUpdateCommand → check → UI or success
         InitModule();
         GameStart();  // This sends STARTUP → StartupMacroCommand → HotUpdateCommand
-        ConnectServer();
 
         // Validate HotUpdateConfig.localHotUpdateDir matches DEFAULT_HOT_UPDATE_DIR.
         // If mismatched, the Awake-time cacheDir would have used the wrong path and the
@@ -272,6 +271,9 @@ public class GameMain : MonoBehaviour
             // and only after a small grace period to let the coroutine actually start.
             if (!sawNonIdle && state == HotUpdateState.Idle && elapsed > 0.5f) break;
 
+            // Returned to Idle after checking ("no server" or "no update") → done
+            if (sawNonIdle && state == HotUpdateState.Idle) break;
+
             // Hard timeout
             if (elapsed > timeout) break;
 
@@ -288,6 +290,10 @@ public class GameMain : MonoBehaviour
         // Reload red dot tree if hot update delivered a new RedDotTree.json
         RedDotManager.Instance.ReloadTree();
 #endif
+
+        // Connect to TCP game server AFTER hot update settles — avoids idle TCP timeout
+        // during long downloads that could trigger an unwanted disconnect notification.
+        ConnectServer();
 
         // Open login only if no restart is needed
         if (!HotUpdateManager.Instance.NeedRestart)
@@ -337,6 +343,7 @@ public class GameMain : MonoBehaviour
         facade.RegisterCommand(NotificationConst.CREATE_PLAYER,      () => new CreatePlayerCommand());
         facade.RegisterCommand(NetworkNotificationConst.NETWORK_DISCONNECTED, () => new NetworkDisconnectedCommand());
         facade.RegisterCommand(NetworkNotificationConst.NETWORK_CONNECTED,    () => new NetworkConnectedCommand());
+        facade.RegisterCommand(NetworkNotificationConst.NETWORK_ERROR,       () => new NetworkErrorCommand());
 
         // Register LoginSuccessCommand from HotUpdateAssembly (via reflection)
         if (_cmdLoginSuccess != null)

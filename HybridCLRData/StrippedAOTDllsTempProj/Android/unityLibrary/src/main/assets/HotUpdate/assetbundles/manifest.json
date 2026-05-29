@@ -1,23 +1,43 @@
 {
-    "version": "1.0.8",
-    "buildTime": "2026-05-26T15:37:59",
+    "version": "1.0.2",
+    "buildTime": "2026-05-29T12:37:08",
     "platform": "Android",
     "bundles": [
         {
             "name": "base_base_prefab.ab",
-            "md5": "7a943439cc16402339fd1d36b5fcc88f",
-            "sha256": "4e9bd871f57df642665268427a1aeff63dca3980f5afa74f1f1619face821d0b",
-            "crc32": "4E7D52BA",
-            "size": 20007,
+            "md5": "f0f2ba912c7c11a204c5ba4e41406fda",
+            "sha256": "eccdf2c11122830edc155d1bb955bf40d1fd06c5cb5e1de2a8a04be9ea840f31",
+            "crc32": "1BC7F3DE",
+            "size": 29039,
             "layer": 0,
             "compression": 0,
             "resourceType": 1,
             "dependencies": [],
             "assets": [
                 "Assets/ProjectAssets/Base/UIAssets/Prefabs/UITips/UITipsPanel.prefab",
+                "Assets/ProjectAssets/Base/UIAssets/Prefabs/UILoading/UILoadingPanel.prefab",
                 "Assets/ProjectAssets/Base/UIAssets/Prefabs/UIReStart/UIReStartPanel.prefab",
                 "Assets/ProjectAssets/Base/UIAssets/Prefabs/UIHotUpdate/UIHotUpdatePanel.prefab",
                 "Assets/ProjectAssets/Base/UIAssets/Prefabs/UILogin/UILoginPanel.prefab"
+            ]
+        },
+        {
+            "name": "base_base_video.ab",
+            "md5": "5f0af5752dc936501fc694d2403f02e7",
+            "sha256": "f8b6895a87cb118b8241a8bef105fc85e78b5852135f1c9cc63ed03cdde63298",
+            "crc32": "2AD0DCA0",
+            "size": 24317102,
+            "layer": 0,
+            "compression": 0,
+            "resourceType": 10,
+            "dependencies": [],
+            "assets": [
+                "Assets/ProjectAssets/Base/Video/Cones-2D-1080p60-H264.mp4",
+                "Assets/ProjectAssets/Base/Video/BigBuckBunny-360p30-H264.mp4",
+                "Assets/ProjectAssets/Base/Video/Cones-360Stereo-2K30-H264.mp4",
+                "Assets/ProjectAssets/Base/Video/Cones-360Mono-4K30-H264.mp4",
+                "Assets/ProjectAssets/Base/Video/RenderHeads-1080p30-H264.mp4",
+                "Assets/ProjectAssets/Base/Video/Cones-Transparent-2K60-H264.mp4"
             ]
         },
         {
@@ -39,10 +59,10 @@
         },
         {
             "name": "dll/HotUpdateAssembly.dll",
-            "md5": "32f48c5b4bcae535897caf09084ee4a7",
+            "md5": "b966ea29f93b07ad45ac01dd90628501",
             "sha256": "",
             "crc32": "",
-            "size": 29696,
+            "size": 27648,
             "layer": 0,
             "compression": 0,
             "resourceType": 0,

@@ -54,7 +54,8 @@ public class NetworkDisconnectedCommand : CommandBase
 
 /// <summary>
 /// Triggered by NETWORK_CONNECTED notification.
-/// If this is a reconnect, flushes buffered pending messages.
+/// If this is a reconnect, sends LOGIN_C2S first to rebind AccountId on the new TCP connection.
+/// UserProxy.OnLoginS2C completes the reconnect handshake (flush + data refresh).
 /// </summary>
 public class NetworkConnectedCommand : CommandBase
 {
@@ -63,12 +64,45 @@ public class NetworkConnectedCommand : CommandBase
         var proxy = GetProxy<NetworkProxy>(NetworkProxy.NAME);
         if (!proxy.IsReconnecting) return;
 
-        proxy.ResetReconnectState();
-        Log.d("Reconnected successfully. Flushing pending messages.", "NetworkConnectedCommand");
-        NetworkManager.Instance.FlushPendingMessages();
+        Log.d($"Reconnect: new TCP connection established. AccountId={NetworkManager.CurrentAccountId}.", "NetworkConnectedCommand");
 
-        // Re-request server-synced data after reconnect (data may be stale after disconnect).
-        NetworkMessageHelper.SendBagList();
-        Facade.SendNotification(NetworkNotificationConst.NETWORK_RECONNECTED);
+        if (NetworkManager.HasCachedLogin)
+        {
+            Log.d("Reconnect: sending login to rebind account on new connection...", "NetworkConnectedCommand");
+            NetworkManager.Instance.SendCachedLogin();
+            // Keep IsReconnecting=true — UserProxy.OnLoginS2C will complete the handshake.
+        }
+        else
+        {
+            // No cached credentials (legacy scenario or first connect), flush directly
+            Log.w("Reconnect: no cached credentials, flushing pending without login.", "NetworkConnectedCommand");
+            proxy.ResetReconnectState();
+            NetworkManager.Instance.FlushPendingMessages();
+            NetworkMessageHelper.SendBagList();
+            Facade.SendNotification(NetworkNotificationConst.NETWORK_RECONNECTED);
+        }
+    }
+}
+
+/// <summary>
+/// Triggered by NETWORK_ERROR notification.
+/// Handles connection errors that are not clean disconnect events.
+/// </summary>
+public class NetworkErrorCommand : CommandBase
+{
+    protected override void OnExecute(INotification notification)
+    {
+        var errorMsg = notification.Body as string ?? "Connection error";
+        Log.w($"Network error: {errorMsg}", "NetworkErrorCommand");
+
+        var proxy = GetProxy<NetworkProxy>(NetworkProxy.NAME);
+        // If currently reconnecting and the reconnection itself failed, reset state
+        // so the user can retry without waiting for the 15s timeout.
+        if (proxy.IsReconnecting)
+        {
+            Log.w("Reconnect attempt failed. Resetting reconnect state.", "NetworkErrorCommand");
+            proxy.ResetReconnectState();
+            NetworkManager.Instance.ClearPendingMessages();
+        }
     }
 }

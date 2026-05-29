@@ -20,7 +20,7 @@ except ImportError:
 # Paths
 # ============================================================
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PUREMVC_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", "..", "PureMVC_Framework"))
+PUREMVC_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 SERVER_ROOT = os.path.join(PUREMVC_ROOT, "ProtoServer")
 DESIGN_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 EXCEL_DIR = os.path.join(DESIGN_DIR, "Excel")
@@ -33,6 +33,7 @@ CLIENT_JSON_DIR = os.path.join(CLIENT_PROJECT, "Assets", "GameConfig")
 CLIENT_LUA_DIR = os.path.join(CLIENT_PROJECT, "Assets", "GameConfig", "Lua")
 CLIENT_CS_DIR = os.path.join(CLIENT_PROJECT, "Assets", "Scripts", "HotUpdateAssembly", "GameConfigCs")
 SERVER_CS_DIR = os.path.join(SERVER_PROJECT, "Config")
+DESIGN_CONFIG_JSON_DIR = os.path.join(PUREMVC_ROOT, "DesignConfig", "Json")
 
 # ============================================================
 # Type Parsing
@@ -448,7 +449,7 @@ def export_all():
     print()
 
     # Ensure output dirs exist
-    for d in [CLIENT_JSON_DIR, CLIENT_LUA_DIR, CLIENT_CS_DIR, SERVER_CS_DIR]:
+    for d in [CLIENT_JSON_DIR, CLIENT_LUA_DIR, CLIENT_CS_DIR, SERVER_CS_DIR, DESIGN_CONFIG_JSON_DIR]:
         os.makedirs(d, exist_ok=True)
 
     # Find all .xlsx files
@@ -477,6 +478,7 @@ def export_all():
 
         for table in tables:
             export_json(table, CLIENT_JSON_DIR)
+            export_json(table, DESIGN_CONFIG_JSON_DIR)
             export_lua(table, CLIENT_LUA_DIR)
             export_csharp(table, CLIENT_CS_DIR, None)
             export_csharp(table, SERVER_CS_DIR, "Config")
@@ -486,6 +488,7 @@ def export_all():
     print("=" * 60)
     print("Done! %d config tables exported." % total_tables)
     print("  JSON -> %s" % CLIENT_JSON_DIR)
+    print("  JSON -> %s" % DESIGN_CONFIG_JSON_DIR)
     print("  LUA  -> %s" % CLIENT_LUA_DIR)
     print("  C#   -> %s" % CLIENT_CS_DIR)
     print("  C#   -> %s" % SERVER_CS_DIR)

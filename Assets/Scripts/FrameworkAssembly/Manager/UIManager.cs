@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using PureMVC.Patterns.Facade;
 using UnityEngine;
@@ -118,19 +119,19 @@ public class UIManager
     // Cache reflected ConstructorInfo to avoid repeated Activator.CreateInstance type-resolution overhead.
     // IL2CPP-friendly: uses ConstructorInfo.Invoke (always supported), no Expression.Compile.
     // Key: mediator type, Value: cached ctor (string, GameObject, int, bool)
-    private static readonly Dictionary<Type, System.Reflection.ConstructorInfo> _mediatorCtorCache
-        = new Dictionary<Type, System.Reflection.ConstructorInfo>();
+    // ConcurrentDictionary for thread-safe reads (ctor resolution is idempotent).
+    private static readonly ConcurrentDictionary<Type, System.Reflection.ConstructorInfo> _mediatorCtorCache
+        = new ConcurrentDictionary<Type, System.Reflection.ConstructorInfo>();
 
     private static System.Reflection.ConstructorInfo GetMediatorCtor(Type type)
     {
-        if (_mediatorCtorCache.TryGetValue(type, out var cached))
-            return cached;
-
-        var ctor = type.GetConstructor(new[] { typeof(string), typeof(GameObject), typeof(int), typeof(bool) });
-        if (ctor == null)
-            Log.e($"Mediator type {type.Name} missing required constructor (string,GameObject,int,bool)", "UIManager");
-        _mediatorCtorCache[type] = ctor;
-        return ctor;
+        return _mediatorCtorCache.GetOrAdd(type, t =>
+        {
+            var ctor = t.GetConstructor(new[] { typeof(string), typeof(GameObject), typeof(int), typeof(bool) });
+            if (ctor == null)
+                Log.e($"Mediator type {t.Name} missing required constructor (string,GameObject,int,bool)", "UIManager");
+            return ctor;
+        });
     }
     #endregion
 
@@ -291,6 +292,31 @@ public class UIManager
         }
         uiMediatorDic.Clear();
         uiStack.Clear();
+    }
+    #endregion
+
+    #region Loading
+    /// <summary>
+    /// Show a reusable full-screen loading overlay.
+    /// Does NOT push to uiStack — it lives on the topmost layer and does not
+    /// interfere with normal UI navigation (show/hide/push/pop).
+    /// Idempotent: repeated calls just show the same instance.
+    /// </summary>
+    public void ShowLoading()
+    {
+        OpenUI<UILoadingMediator>(UIConst.UILoading, EUILayer.SecondLayer, isPushStack: false, hideLastUI: false);
+    }
+
+    /// <summary>
+    /// Hide the loading overlay if it is currently open.
+    /// Safe to call when loading is not showing.
+    /// </summary>
+    public void HideLoading()
+    {
+        if (uiMediatorDic.TryGetValue(UIConst.UILoading, out var mediator))
+        {
+            mediator.Hide();
+        }
     }
     #endregion
 

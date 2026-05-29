@@ -149,6 +149,15 @@ public static class NotificationConst
     public static string BAG_LIST_UPDATED => Get("BAG_LIST_UPDATED");
     public static string BAG_ITEM_CHANGED => Get("BAG_ITEM_CHANGED");
 
+    // --- RedDot ---
+    public static string UPDATE_REDDOT => Get("UPDATE_REDDOT");
+
+    // --- Timeline ---
+    public static string TIMELINE_STARTED => Get("TIMELINE_STARTED");
+    public static string TIMELINE_COMPLETED => Get("TIMELINE_COMPLETED");
+    public static string TIMELINE_STOPPED => Get("TIMELINE_STOPPED");
+    public static string TIMELINE_EVENT => Get("TIMELINE_EVENT");
+
     // --- System ---
     public static string SYS_ERROR => Get("SYS_ERROR");
 
@@ -200,6 +209,8 @@ public static class NotificationConst
         Register("SAVE_DATA"); Register("LOAD_DATA");
         Register("PAUSE_GAME"); Register("RESUME_GAME");
         Register("SYS_ERROR");
+        Register("TIMELINE_STARTED"); Register("TIMELINE_COMPLETED");
+        Register("TIMELINE_STOPPED"); Register("TIMELINE_EVENT");
     }
 
     /// <summary>

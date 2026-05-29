@@ -105,6 +105,61 @@ public class NetworkManager : MonoBehaviour
         get => Interlocked.Read(ref _currentAccountId);
         set => Interlocked.Exchange(ref _currentAccountId, value);
     }
+
+    // Cached login credentials for auto re-login after reconnect
+    // Protected by _credentialLock to prevent torn reads/writes
+    private static long _cachedAccountId = 0;
+    private static string _cachedPassword = null;
+    private static readonly object _credentialLock = new object();
+
+    public static bool HasCachedLogin
+    {
+        get
+        {
+            lock (_credentialLock)
+                return _cachedAccountId != 0 && !string.IsNullOrEmpty(_cachedPassword);
+        }
+    }
+
+    public static void CacheLoginCredentials(long accountId, string password)
+    {
+        lock (_credentialLock)
+        {
+            _cachedAccountId = accountId;
+            _cachedPassword = password;
+        }
+    }
+
+    public static void ClearLoginCredentials()
+    {
+        lock (_credentialLock)
+        {
+            _cachedAccountId = 0;
+            _cachedPassword = null;
+        }
+    }
+
+    /// <summary>
+    /// Send LOGIN_C2S using cached credentials (for reconnect flow).
+    /// </summary>
+    public void SendCachedLogin()
+    {
+        long accountId;
+        string password;
+        lock (_credentialLock)
+        {
+            if (_cachedAccountId == 0 || string.IsNullOrEmpty(_cachedPassword))
+                return;
+            accountId = _cachedAccountId;
+            password  = _cachedPassword;
+        }
+        var login = new LoginMessageC2S
+        {
+            AccountId = accountId,
+            Password  = AesHelper.EncryptString(password)
+        };
+        Send(MessageConst.LOGIN_C2S, login);
+    }
     #endregion
 
     #region Unity Lifecycle

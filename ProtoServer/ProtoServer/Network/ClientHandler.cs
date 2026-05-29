@@ -1228,6 +1228,9 @@ public class ClientHandler : IDisposable
         if (Interlocked.Exchange(ref _isDisposedInt, 1) == 1) return;
         _isDisposed = true;
 
+        // Clean up rate limit entry to prevent unbounded memory growth
+        _rateLimitMap.TryRemove(ClientId, out _);
+
         // Notify online friends that this player is offline (fire-and-forget)
         _ = NotifyFriendsOfflineAsync();
 

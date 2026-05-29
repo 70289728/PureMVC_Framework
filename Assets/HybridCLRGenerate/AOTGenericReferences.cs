@@ -35,10 +35,6 @@ public class AOTGenericReferences : UnityEngine.MonoBehaviour
 	// Google.Protobuf.ValueWriter<object>
 	// System.Action<int>
 	// System.Action<object>
-	// System.ArraySegment.Enumerator<byte>
-	// System.ArraySegment.Enumerator<object>
-	// System.ArraySegment<byte>
-	// System.ArraySegment<object>
 	// System.ByReference<byte>
 	// System.ByReference<object>
 	// System.Collections.Concurrent.ConcurrentDictionary.<GetEnumerator>d__35<object,object>
@@ -105,12 +101,8 @@ public class AOTGenericReferences : UnityEngine.MonoBehaviour
 	// System.IEquatable<object>
 	// System.Predicate<int>
 	// System.Predicate<object>
-	// System.ReadOnlySpan.Enumerator<byte>
-	// System.ReadOnlySpan.Enumerator<object>
 	// System.ReadOnlySpan<byte>
 	// System.ReadOnlySpan<object>
-	// System.Span.Enumerator<byte>
-	// System.Span.Enumerator<object>
 	// System.Span<byte>
 	// System.Span<object>
 	// }}

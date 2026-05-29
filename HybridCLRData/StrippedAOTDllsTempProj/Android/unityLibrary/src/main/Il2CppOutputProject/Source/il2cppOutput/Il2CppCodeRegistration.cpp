@@ -21,6 +21,11 @@ IL2CPP_EXTERN_C const Il2CppMethodPointer g_UnresolvedInstanceMethodPointers[];
 IL2CPP_EXTERN_C const Il2CppMethodPointer g_UnresolvedStaticMethodPointers[];
 IL2CPP_EXTERN_C Il2CppInteropData g_Il2CppInteropData[];
 IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_AOTAssembly_CodeGenModule;
+IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_AVProVideo_Demos_CodeGenModule;
+IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_AVProVideo_Extensions_Timeline_CodeGenModule;
+IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_AVProVideo_Extensions_UnityUI_CodeGenModule;
+IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_AVProVideo_Extensions_VisualEffectGraph_CodeGenModule;
+IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_AVProVideo_Runtime_CodeGenModule;
 IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_AssemblyU2DCSharp_CodeGenModule;
 IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_FrameworkAssembly_CodeGenModule;
 IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_Google_Protobuf_CodeGenModule;
@@ -71,12 +76,18 @@ IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_UnityEngine_VFXModule_CodeGenModule;
 IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_UnityEngine_VRModule_CodeGenModule;
 IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_UnityEngine_VideoModule_CodeGenModule;
 IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_UnityEngine_XRModule_CodeGenModule;
+IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_Unity_Timeline_CodeGenModule;
 IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g___Generated_CodeGenModule;
 IL2CPP_EXTERN_C_CONST Il2CppCodeGenModule g_mscorlib_CodeGenModule;
 IL2CPP_EXTERN_C const Il2CppCodeGenModule* g_CodeGenModules[];
-const Il2CppCodeGenModule* g_CodeGenModules[53] = 
+const Il2CppCodeGenModule* g_CodeGenModules[59] = 
 {
 	(&g_AOTAssembly_CodeGenModule),
+	(&g_AVProVideo_Demos_CodeGenModule),
+	(&g_AVProVideo_Extensions_Timeline_CodeGenModule),
+	(&g_AVProVideo_Extensions_UnityUI_CodeGenModule),
+	(&g_AVProVideo_Extensions_VisualEffectGraph_CodeGenModule),
+	(&g_AVProVideo_Runtime_CodeGenModule),
 	(&g_AssemblyU2DCSharp_CodeGenModule),
 	(&g_FrameworkAssembly_CodeGenModule),
 	(&g_Google_Protobuf_CodeGenModule),
@@ -127,6 +138,7 @@ const Il2CppCodeGenModule* g_CodeGenModules[53] =
 	(&g_UnityEngine_VRModule_CodeGenModule),
 	(&g_UnityEngine_VideoModule_CodeGenModule),
 	(&g_UnityEngine_XRModule_CodeGenModule),
+	(&g_Unity_Timeline_CodeGenModule),
 	(&g___Generated_CodeGenModule),
 	(&g_mscorlib_CodeGenModule),
 };
@@ -135,20 +147,20 @@ const Il2CppCodeRegistration g_CodeRegistration =
 {
 	978,
 	g_ReversePInvokeWrapperPointers,
-	51918,
+	52731,
 	g_Il2CppGenericMethodPointers,
 	g_Il2CppGenericAdjustorThunks,
-	10126,
+	10270,
 	g_Il2CppInvokerPointers,
-	2094,
+	2184,
 	g_UnresolvedVirtualMethodPointers,
 	g_UnresolvedInstanceMethodPointers,
 	g_UnresolvedStaticMethodPointers,
-	529,
+	541,
 	g_Il2CppInteropData,
 	0,
 	NULL,
-	53,
+	59,
 	g_CodeGenModules,
 };
 IL2CPP_EXTERN_C_CONST Il2CppMetadataRegistration g_MetadataRegistration;
@@ -161,9 +173,6 @@ static const Il2CppCodeGenOptions s_Il2CppCodeGenOptions =
 void s_Il2CppCodegenRegistration()
 {
 	il2cpp_codegen_register (&g_CodeRegistration, &g_MetadataRegistration, &s_Il2CppCodeGenOptions);
-	#if IL2CPP_MONO_DEBUGGER
-	il2cpp_codegen_register_debugger_data(NULL);
-	#endif
 }
 #if RUNTIME_IL2CPP
 typedef void (*CodegenRegistrationFunction)();

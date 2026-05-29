@@ -129,20 +129,25 @@ namespace PureMVC.Core
         {
             if (!observerMap.TryGetValue(notification.Name, out var observersRef)) return;
 
-            // Iterate under lock — zero allocation (no snapshot copy).
-            // Wrap each observer in try-catch so one crashing observer doesn't break others.
+            // Snapshot the observer list to avoid "collection was modified" when an
+            // observer's HandleNotification triggers RegisterObserver/RemoveObserver
+            // (e.g. LoginSuccessCommand closing UILoginMediator during LOGIN_SUCCESS).
+            IObserver[] snapshot;
             lock (_observerLock)
             {
-                foreach (var observer in observersRef)
+                snapshot = new IObserver[observersRef.Count];
+                observersRef.CopyTo(snapshot, 0);
+            }
+
+            foreach (var observer in snapshot)
+            {
+                try
                 {
-                    try
-                    {
-                        observer.NotifyObserver(notification);
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.e($"Observer [{observer.GetType().Name}] threw on notification [{notification.Name}]: {ex}", "View");
-                    }
+                    observer.NotifyObserver(notification);
+                }
+                catch (Exception ex)
+                {
+                    Log.e($"Observer [{observer.GetType().Name}] threw on notification [{notification.Name}]: {ex}", "View");
                 }
             }
         }
