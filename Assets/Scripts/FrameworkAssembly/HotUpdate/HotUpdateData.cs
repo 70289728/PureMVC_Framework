@@ -54,6 +54,7 @@ public enum AssetBundleResourceType
     Lua = 7,
     Animation = 8,
     Material = 9,
+    Video = 10,
 }
 
 /// <summary>

@@ -174,6 +174,7 @@ public class AssetBundleBuildRules
             ".json" or ".asset" or ".bytes" => AssetBundleResourceType.Config,
             ".lua" => AssetBundleResourceType.Lua,
             ".ttf" or ".otf" => AssetBundleResourceType.Font,
+            ".mp4" or ".mov" or ".webm" or ".avi" => AssetBundleResourceType.Video,
             _ => AssetBundleResourceType.Unknown,
         };
     }
@@ -217,6 +218,10 @@ public class AssetBundleBuildRules
             ".otf" => true,
             ".lua" => true,
             ".bytes" => true,
+            ".mp4" => true,
+            ".mov" => true,
+            ".webm" => true,
+            ".avi" => true,
             _ => false,
         };
     }
