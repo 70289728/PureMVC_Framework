@@ -352,6 +352,13 @@ public class GameMain : MonoBehaviour
                 (ICommand)Activator.CreateInstance(_cmdLoginSuccess));
         }
 
+        // Register AudioProxy and load audio config
+        {
+            var audioProxy = new AudioProxy();
+            facade.RegisterProxy(audioProxy);
+            audioProxy.LoadConfig();
+        }
+
         // Execute hot-update startup macro command (registers hot-update proxies + commands)
         var hotStartupCmdType = _hotAssembly?.GetType("HotUpdateStartupMacroCommand");
         if (hotStartupCmdType != null)

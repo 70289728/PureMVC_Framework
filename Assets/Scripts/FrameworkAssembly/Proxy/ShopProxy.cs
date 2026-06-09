@@ -145,7 +145,7 @@ public class ShopProxy : ProxyBase
             Log.d($"Buy success: shopItemId={resp.ShopItemId}, bought={resp.BoughtCount}, gold={resp.GoldRemaining}", NAME);
 
             // Sync gold to UserProxy via proper API
-            var userProxy = GetProxy<UserProxy>(ProxyConst.USER_PROXY);
+            var userProxy = GetProxy<UserProxy>(UserProxy.NAME);
             userProxy?.SetGold(resp.GoldRemaining);
 
             // Request updated bag list since server added item

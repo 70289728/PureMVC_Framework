@@ -44,7 +44,7 @@ public class UIConst
     public const string FIRST_CANVAS = "FirstCanvas";
     public const string SECOND_CANVAS = "SecondCanvas";
     public const string THIRD_CANVAS = "ThirdCanvas";
-    public const string FORTH_CANVAS = "FourthCanvas";
+    public const string FOURTH_CANVAS = "FourthCanvas";
     public const string GUIDE_CANVAS = "GuideCanvas";
     #endregion
 

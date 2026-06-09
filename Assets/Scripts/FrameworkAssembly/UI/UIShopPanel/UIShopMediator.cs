@@ -60,7 +60,7 @@ public class UIShopMediator : UIMediatorBase
     protected override void RegisterUIEvents()
     {
         base.RegisterUIEvents();
-        _shopProxy = GetProxy<ShopProxy>(ProxyConst.SHOP_PROXY);
+        _shopProxy = GetProxy<ShopProxy>(ShopProxy.NAME);
         RefreshShopItems();
     }
 

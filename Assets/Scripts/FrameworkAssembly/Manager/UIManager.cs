@@ -48,7 +48,7 @@ public class UIManager
         layerTransPath[EUILayer.FirstLayer] = UIConst.FIRST_CANVAS;
         layerTransPath[EUILayer.SecondLayer] = UIConst.SECOND_CANVAS;
         layerTransPath[EUILayer.ThirdLayer] = UIConst.THIRD_CANVAS;
-        layerTransPath[EUILayer.FourthLayer] = UIConst.FORTH_CANVAS;
+        layerTransPath[EUILayer.FourthLayer] = UIConst.FOURTH_CANVAS;
         layerTransPath[EUILayer.GuideLayer] = UIConst.GUIDE_CANVAS;
         layerTransDic = new Dictionary<EUILayer, Transform>();
         uiMediatorDic = new Dictionary<string, UIMediatorBase>();

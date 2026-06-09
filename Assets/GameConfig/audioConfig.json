@@ -1,0 +1,84 @@
+{
+  "items": [
+    {
+      "id": 1,
+      "name": "bgm_main",
+      "path": "Audio/BGM/main_theme",
+      "type": 0,
+      "volume": 1.0,
+      "loop": true,
+      "channel": "BGM",
+      "layer": 0
+    },
+    {
+      "id": 2,
+      "name": "bgm_battle",
+      "path": "Audio/BGM/battle_01",
+      "type": 0,
+      "volume": 0.8,
+      "loop": true,
+      "channel": "BGM",
+      "layer": 0
+    },
+    {
+      "id": 3,
+      "name": "sfx_click",
+      "path": "Audio/SFX/ui_click",
+      "type": 1,
+      "volume": 1.0,
+      "loop": false,
+      "channel": "SFX",
+      "layer": 0
+    },
+    {
+      "id": 4,
+      "name": "sfx_confirm",
+      "path": "Audio/SFX/ui_confirm",
+      "type": 1,
+      "volume": 1.0,
+      "loop": false,
+      "channel": "SFX",
+      "layer": 0
+    },
+    {
+      "id": 5,
+      "name": "sfx_cancel",
+      "path": "Audio/SFX/ui_cancel",
+      "type": 1,
+      "volume": 1.0,
+      "loop": false,
+      "channel": "SFX",
+      "layer": 0
+    },
+    {
+      "id": 6,
+      "name": "sfx_win",
+      "path": "Audio/SFX/battle_win",
+      "type": 1,
+      "volume": 1.0,
+      "loop": false,
+      "channel": "SFX",
+      "layer": 0
+    },
+    {
+      "id": 7,
+      "name": "sfx_lose",
+      "path": "Audio/SFX/battle_lose",
+      "type": 1,
+      "volume": 1.0,
+      "loop": false,
+      "channel": "SFX",
+      "layer": 0
+    },
+    {
+      "id": 8,
+      "name": "voice_welcome",
+      "path": "Audio/Voice/welcome",
+      "type": 2,
+      "volume": 1.0,
+      "loop": false,
+      "channel": "Voice",
+      "layer": 0
+    }
+  ]
+}

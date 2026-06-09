@@ -158,6 +158,12 @@ public static class NotificationConst
     public static string TIMELINE_STOPPED => Get("TIMELINE_STOPPED");
     public static string TIMELINE_EVENT => Get("TIMELINE_EVENT");
 
+    // --- Audio ---
+    public static string AUDIO_BGM_CHANGED => Get("AUDIO_BGM_CHANGED");
+    public static string AUDIO_VOLUME_CHANGED => Get("AUDIO_VOLUME_CHANGED");
+    public static string AUDIO_MUTE_CHANGED => Get("AUDIO_MUTE_CHANGED");
+    public static string AUDIO_CONFIG_LOADED => Get("AUDIO_CONFIG_LOADED");
+
     // --- System ---
     public static string SYS_ERROR => Get("SYS_ERROR");
 
@@ -211,6 +217,8 @@ public static class NotificationConst
         Register("SYS_ERROR");
         Register("TIMELINE_STARTED"); Register("TIMELINE_COMPLETED");
         Register("TIMELINE_STOPPED"); Register("TIMELINE_EVENT");
+        Register("AUDIO_BGM_CHANGED"); Register("AUDIO_VOLUME_CHANGED");
+        Register("AUDIO_MUTE_CHANGED"); Register("AUDIO_CONFIG_LOADED");
     }
 
     /// <summary>
